@@ -1,5 +1,5 @@
 <template>
-  <div ref="list" class="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+  <div ref="list" class="flex-1 overflow-y-auto px-4 py-4 space-y-5" @click="onListClick">
     <div v-if="messages.length === 0" class="text-neutral-500 text-center mt-32 text-sm">
       Envia un mensaje para empezar.
     </div>
@@ -88,6 +88,46 @@ export default {
     renderMarkdown,
     toggleReasoning(i) {
       this.expanded[i] = !this.expanded[i];
+    },
+    async onListClick(event) {
+      const btn = event.target.closest('.code-copy-btn');
+      if (!btn) return;
+      const block = btn.closest('.code-block');
+      const codeEl = block?.querySelector('pre code');
+      if (!codeEl) return;
+      const text = codeEl.innerText;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        this.flashCopied(btn);
+      } catch {
+        // ignore copy failures silently
+      }
+    },
+    flashCopied(btn) {
+      const label = btn.querySelector('.code-copy-label');
+      const icon = btn.querySelector('.code-copy-icon');
+      const prevLabel = label?.textContent;
+      const prevIcon = icon?.textContent;
+      btn.classList.add('is-copied');
+      if (label) label.textContent = 'Copiado';
+      if (icon) icon.textContent = 'check';
+      clearTimeout(btn._copyTimer);
+      btn._copyTimer = setTimeout(() => {
+        btn.classList.remove('is-copied');
+        if (label && prevLabel != null) label.textContent = prevLabel;
+        if (icon && prevIcon != null) icon.textContent = prevIcon;
+      }, 1500);
     },
   },
 };
