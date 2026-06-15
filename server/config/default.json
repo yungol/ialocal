@@ -1,0 +1,11 @@
+{
+  "server": {
+    "port": 4001,
+    "host": "0.0.0.0"
+  },
+  "llamaSwap": {
+    "host": "127.0.0.1",
+    "port": 8080
+  },
+  "modelsDir": "/home/juan/models"
+}
