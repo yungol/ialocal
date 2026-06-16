@@ -1,6 +1,23 @@
 <template>
   <div class="px-6 pb-5 pt-2 flex-shrink-0">
     <div class="max-w-3xl mx-auto">
+      <!-- Quick action chips -->
+      <div v-if="!disabled && showQuickActions" class="flex gap-2 mb-3">
+        <button
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-700/70 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500 transition-colors text-[13px]"
+          @click="setPrefill('Tradúceme el siguiente texto al español: ')"
+        >
+          <span class="material-icons text-[16px]">translate</span>
+          Traducir
+        </button>
+        <button
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-700/70 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500 transition-colors text-[13px]"
+          @click="setPrefill('Corrige ortografía y gramática. Solo devuelve el texto corregido, sin saludos ni comentarios. Del siguiente texto: ')"
+        >
+          <span class="material-icons text-[16px]">spellcheck</span>
+          Corregir texto
+        </button>
+      </div>
       <div
         class="flex items-end gap-2 bg-neutral-900 border border-neutral-700/70 rounded-2xl px-3 py-2 transition-colors focus-within:border-neutral-500"
       >
@@ -35,6 +52,7 @@ export default {
   name: 'ChatInput',
   props: {
     disabled: { type: Boolean, default: false },
+    showQuickActions: { type: Boolean, default: false },
   },
   emits: ['send'],
   data() {
@@ -48,6 +66,17 @@ export default {
       if (!el) return;
       el.style.height = 'auto';
       el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+    },
+    setPrefill(value) {
+      this.text = value;
+      this.$nextTick(() => {
+        this.autoGrow();
+        const el = this.$refs.input;
+        if (el) {
+          el.focus();
+          el.setSelectionRange(el.value.length, el.value.length);
+        }
+      });
     },
     send() {
       const content = this.text.trim();

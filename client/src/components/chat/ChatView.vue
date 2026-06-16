@@ -28,7 +28,7 @@
     </div>
 
     <MessageList :messages="messages" :streaming="streaming" />
-    <ChatInput :disabled="streaming" @send="onSend" />
+    <ChatInput :disabled="streaming" :show-quick-actions="messages.length === 0" @send="onSend" />
   </div>
 </template>
 
