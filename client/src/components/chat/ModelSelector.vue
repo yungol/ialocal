@@ -1,12 +1,12 @@
 <template>
-  <div class="flex items-center gap-2">
-    <span class="text-neutral-500 text-xs">Modelo</span>
+  <div class="flex items-center gap-2 flex-shrink-0">
+    <span class="material-icons text-[16px] text-neutral-500">memory</span>
     <select
       v-model="selected"
-      class="bg-neutral-900 text-neutral-200 border border-neutral-700 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:border-neutral-500"
+      class="bg-neutral-900 text-neutral-200 border border-neutral-700/70 rounded-lg px-3 py-1.5 text-[13px] focus:outline-none focus:border-neutral-500 hover:border-neutral-600 transition-colors cursor-pointer"
       @change="$emit('select', selected)"
     >
-      <option value="" disabled>Seleccionar...</option>
+      <option value="" disabled>Seleccionar modelo...</option>
       <option v-for="m in models" :key="m.id" :value="m.id">
         {{ m.name }}
       </option>
@@ -23,7 +23,7 @@ export default {
   props: {
     modelValue: { type: String, default: '' },
   },
-  emits: ['select', 'update:modelValue'],
+  emits: ['select', 'update:modelValue', 'loaded'],
   data() {
     return {
       models: [],
@@ -44,14 +44,12 @@ export default {
     this.loading = true;
     try {
       this.models = await getChatModels();
-      if (this.models.length > 0 && !this.modelValue) {
-        this.selected = this.models[0].id;
-        this.$emit('select', this.models[0].id);
-      }
     } catch {
       this.models = [];
     } finally {
       this.loading = false;
+      // Let the parent decide the default (persisted preference vs. fallback)
+      this.$emit('loaded', this.models);
     }
   },
 };

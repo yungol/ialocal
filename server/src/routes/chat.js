@@ -7,6 +7,10 @@ const router = express.Router();
 const CHATS_DIR = path.join(__dirname, '..', '..', 'data', 'chats');
 const INDEX_PATH = path.join(CHATS_DIR, 'index.json');
 
+// The data directory is gitignored, so it may not exist on a fresh setup.
+// Ensure it exists before any read/write happens.
+fs.mkdirSync(CHATS_DIR, { recursive: true });
+
 function readJSON(filepath) {
   try {
     return JSON.parse(fs.readFileSync(filepath, 'utf-8'));

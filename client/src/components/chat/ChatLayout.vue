@@ -1,22 +1,31 @@
 <template>
-  <div class="flex h-screen">
-    <div class="w-64 bg-neutral-950 border-r border-neutral-800 flex flex-col flex-shrink-0">
+  <div class="flex h-full">
+    <aside class="w-72 bg-neutral-950 border-r border-neutral-800/70 flex flex-col flex-shrink-0">
       <ChatList
         :chats="chats"
         :active-id="chatId"
         @select="onSelectChat"
         @new-chat="onNewChat"
         @delete="onDeleteChat"
-        @navigate="$emit('navigate', $event)"
       />
-    </div>
+    </aside>
     <div class="flex-1 flex flex-col min-w-0">
+      <div
+        v-if="error"
+        class="mx-auto mt-3 max-w-3xl w-full px-6"
+      >
+        <div class="bg-red-950/40 border border-red-800/60 rounded-lg px-3.5 py-2 text-xs flex items-center justify-between gap-2">
+          <span class="text-red-400">{{ error }}</span>
+          <button class="material-icons text-[14px] text-red-400/70 hover:text-red-300" @click="error = ''">close</button>
+        </div>
+      </div>
       <ChatView
         ref="chatView"
         :chat-id="chatId"
         :poll-tick="pollTick"
         @title-changed="onTitleChanged"
         @chat-created="onChatCreated"
+        @turn-complete="loadChatList"
       />
     </div>
   </div>
@@ -34,15 +43,12 @@ export default {
     return {
       chatId: null,
       chats: [],
-      pollInterval: null,
       pollTick: 0,
+      error: '',
     };
   },
   mounted() {
     this.init();
-  },
-  beforeUnmount() {
-    if (this.pollInterval) clearInterval(this.pollInterval);
   },
   methods: {
     async init() {
@@ -51,9 +57,8 @@ export default {
         this.chatId = current.chat.id || null;
         await this.loadChatList();
       } catch {
-        // server not ready yet, poll will recover
+        // server not ready yet; loadChatById retries on its own
       }
-      this.pollInterval = setInterval(() => this.loadChatList(), 5000);
     },
     async loadChatList() {
       try {
@@ -73,13 +78,20 @@ export default {
       try {
         const chat = await createChat();
         this.chatId = chat.id;
+        this.error = '';
         await this.loadChatList();
-      } catch {
-        // ignore
+      } catch (err) {
+        this.error = `No se pudo crear el chat: ${err.message || err}`;
       }
     },
     async onDeleteChat(id) {
-      await deleteChat(id);
+      try {
+        await deleteChat(id);
+        this.error = '';
+      } catch (err) {
+        this.error = `No se pudo borrar el chat: ${err.message || err}`;
+        return;
+      }
       this.loadChatList();
       if (this.chatId === id) {
         this.onNewChat();

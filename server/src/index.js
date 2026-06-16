@@ -6,6 +6,7 @@ const statsRouter = require('./routes/stats');
 const proxyRouter = require('./routes/proxy');
 const chatRouter = require('./routes/chat');
 const generateRouter = require('./routes/generate');
+const settingsRouter = require('./routes/settings');
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api', modelsRouter);
 app.use('/api', statsRouter);
 app.use('/api', chatRouter);
 app.use('/api', generateRouter);
+app.use('/api', settingsRouter);
 app.use('/v1', proxyRouter);
 
 if (process.env.NODE_ENV === 'production') {

@@ -1,52 +1,50 @@
 <template>
   <div class="flex flex-col h-full">
-    <div class="border-b border-neutral-800">
-      <div class="px-3 py-2 flex items-center gap-1">
-        <button
-          v-for="item in quickNav"
-          :key="item.id"
-          class="material-icons text-sm p-1 rounded hover:bg-neutral-800 text-neutral-500 hover:text-neutral-300 transition-colors"
-          :title="item.label"
-          @click="$emit('navigate', item.id)"
-        >{{ item.icon }}</button>
-        <div class="flex-1"></div>
-      </div>
-      <div class="px-3 pb-2">
-        <button
-          class="w-full text-left text-[13px] text-neutral-300 hover:text-neutral-100 transition-colors flex items-center gap-2"
-          @click="$emit('new-chat')"
-        >
-          <span class="material-icons text-base">add</span>
-          Nuevo chat
-        </button>
-      </div>
+    <div class="px-3 pt-4 pb-3">
+      <button
+        class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/60 text-neutral-100 text-sm font-medium transition-colors"
+        @click="$emit('new-chat')"
+      >
+        <span class="material-icons text-[18px]">add</span>
+        Nuevo chat
+      </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto">
+    <div class="px-4 pb-1.5">
+      <span class="text-[11px] font-medium uppercase tracking-wider text-neutral-600">Recientes</span>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-2 pb-3">
       <div v-for="chat in visibleChats" :key="chat.id">
         <button
-          class="w-full text-left px-3 py-2 hover:bg-neutral-800/50 transition-colors flex items-center justify-between gap-2 group"
-          :class="chat.id === activeId ? 'bg-neutral-800' : ''"
+          class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-neutral-800/60 transition-colors flex items-center justify-between gap-2 group"
+          :class="chat.id === activeId ? 'bg-neutral-800/80' : ''"
           @click="$emit('select', chat.id)"
         >
-          <span class="text-[13px] text-neutral-300 truncate flex-1">
+          <span
+            class="text-sm truncate flex-1"
+            :class="chat.id === activeId ? 'text-neutral-100' : 'text-neutral-400 group-hover:text-neutral-200'"
+          >
             {{ chat.title || 'Nuevo chat' }}
           </span>
-          <span class="text-[10px] text-neutral-600 group-hover:text-neutral-500 flex-shrink-0">
+          <span
+            v-if="chat.id !== activeId"
+            class="text-[10px] text-neutral-600 group-hover:hidden flex-shrink-0"
+          >
             {{ relativeTime(chat.updatedAt) }}
           </span>
-          <button
-            class="material-icons text-sm text-neutral-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+          <span
+            class="material-icons text-[16px] text-neutral-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
             @click.stop="$emit('delete', chat.id)"
           >
             close
-          </button>
+          </span>
         </button>
       </div>
 
       <button
         v-if="chats.length > 5"
-        class="w-full text-left px-3 py-2 text-[12px] text-neutral-500 hover:text-neutral-300 transition-colors"
+        class="w-full text-left px-2.5 py-2 mt-1 text-[12px] text-neutral-500 hover:text-neutral-300 transition-colors"
         @click="showAll = true"
       >
         Ver mas...
@@ -121,14 +119,10 @@ export default {
     chats: { type: Array, default: () => [] },
     activeId: { type: String, default: null },
   },
-  emits: ['select', 'new-chat', 'delete', 'navigate'],
+  emits: ['select', 'new-chat', 'delete'],
   data() {
     return {
       showAll: false,
-      quickNav: [
-        { id: 'images', label: 'Imagenes', icon: 'image' },
-        { id: 'management', label: 'Gestion', icon: 'dns' },
-      ],
     };
   },
   computed: {

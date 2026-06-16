@@ -1,55 +1,68 @@
 <template>
-  <div ref="list" class="flex-1 overflow-y-auto px-4 py-4 space-y-5" @click="onListClick">
-    <div v-if="messages.length === 0" class="text-neutral-500 text-center mt-32 text-sm">
-      Envia un mensaje para empezar.
-    </div>
+  <div ref="list" class="flex-1 overflow-y-auto" @click="onListClick">
+    <div class="max-w-3xl mx-auto px-6 py-8 space-y-8">
+      <!-- Empty state -->
+      <div v-if="messages.length === 0" class="flex flex-col items-center justify-center text-center mt-28 select-none">
+        <div class="w-14 h-14 rounded-2xl bg-neutral-900 ring-1 ring-neutral-800 flex items-center justify-center mb-4">
+          <span class="material-icons text-[28px] text-neutral-500">forum</span>
+        </div>
+        <p class="text-base font-medium text-neutral-300">Empezá una conversacion</p>
+        <p class="text-sm text-neutral-600 mt-1">Escribi un mensaje abajo para arrancar.</p>
+      </div>
 
-    <div
-      v-for="(msg, i) in messages"
-      :key="i"
-      class="flex w-full"
-      :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
-    >
-      <div class="max-w-[75%] space-y-2">
-        <!-- Reasoning section (collapsible) -->
-        <div
-          v-if="msg.reasoning"
-          class="border border-neutral-800 rounded-lg overflow-hidden"
-        >
-          <button
-            class="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-neutral-500 hover:text-neutral-400 transition-colors bg-neutral-900"
-            @click="toggleReasoning(i)"
-          >
-            <span class="material-icons text-sm transition-transform" :class="expanded[i] ? 'rotate-90' : ''">chevron_right</span>
-            <span>{{ expanded[i] ? 'Ocultar pensamiento' : 'Ver pensamiento' }}</span>
-            <span v-if="!expanded[i] && i === messages.length - 1 && streaming" class="text-amber-500/70 animate-pulse ml-auto text-[10px]">pensando...</span>
-          </button>
-          <div
-            v-if="expanded[i]"
-            class="px-3 pb-2.5 pt-2 text-[12px] text-neutral-400 leading-relaxed whitespace-pre-wrap border-t border-neutral-800 max-h-48 overflow-y-auto bg-neutral-900/30"
-          >
-            {{ msg.reasoning }}
+      <!-- USER message -->
+      <div v-for="(msg, i) in messages" :key="i">
+        <div v-if="msg.role === 'user'" class="flex justify-end">
+          <div class="max-w-[85%] rounded-2xl rounded-br-md bg-neutral-800 px-4 py-2.5 text-[15px] leading-7 text-neutral-100 whitespace-pre-wrap">
+            {{ msg.content }}
           </div>
         </div>
 
-        <!-- Content bubble -->
-        <div
-          v-if="msg.content"
-          class="rounded-lg px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap"
-          :class="[msg.role === 'user'
-            ? 'bg-neutral-800 text-neutral-100'
-            : 'text-neutral-200',
-            msg.role === 'assistant' ? 'markdown-content' : '']"
-          v-html="msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content"
-        ></div>
+        <!-- ASSISTANT message -->
+        <div v-else class="flex gap-3.5">
+          <div class="w-7 h-7 rounded-lg bg-neutral-800 ring-1 ring-neutral-700/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span class="material-icons text-[16px] text-neutral-300">auto_awesome</span>
+          </div>
+          <div class="min-w-0 flex-1 space-y-2.5">
+            <!-- Reasoning section (collapsible) -->
+            <div
+              v-if="msg.reasoning"
+              class="border border-neutral-800 rounded-xl overflow-hidden"
+            >
+              <button
+                class="w-full flex items-center gap-2 px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300 transition-colors bg-neutral-900/60"
+                @click="toggleReasoning(i)"
+              >
+                <span class="material-icons text-base transition-transform" :class="expanded[i] ? 'rotate-90' : ''">chevron_right</span>
+                <span>{{ expanded[i] ? 'Ocultar razonamiento' : 'Ver razonamiento' }}</span>
+                <span v-if="!expanded[i] && i === messages.length - 1 && streaming" class="text-amber-500/70 animate-pulse ml-auto text-[10px]">pensando...</span>
+              </button>
+              <div
+                v-if="expanded[i]"
+                class="px-3.5 pb-3 pt-2.5 text-[13px] text-neutral-400 leading-relaxed whitespace-pre-wrap border-t border-neutral-800 max-h-56 overflow-y-auto bg-neutral-900/30"
+              >
+                {{ msg.reasoning }}
+              </div>
+            </div>
 
-        <!-- Empty streaming -->
-        <span
-          v-if="i === messages.length - 1 && msg.role === 'assistant' && streaming && !msg.content && !msg.reasoning"
-          class="text-neutral-500 text-sm animate-pulse"
-        >
-          Conectando...
-        </span>
+            <!-- Content (markdown) -->
+            <div
+              v-if="msg.content"
+              class="markdown-content text-neutral-200"
+              v-html="renderMarkdown(msg.content)"
+            ></div>
+
+            <!-- Empty streaming -->
+            <div
+              v-if="i === messages.length - 1 && streaming && !msg.content && !msg.reasoning"
+              class="flex items-center gap-1.5 text-neutral-500 text-sm"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-pulse"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-pulse" style="animation-delay: 0.2s"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-pulse" style="animation-delay: 0.4s"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

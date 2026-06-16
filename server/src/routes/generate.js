@@ -26,13 +26,28 @@ router.post('/generate-title', async (req, res) => {
             content: `User: ${(message || '').slice(0, 300)}\nAssistant: ${(response || '').slice(0, 500)}`,
           },
         ],
-        max_tokens: 15,
+        // enable_thinking:false makes models that honor it (e.g. qwen3-8b) skip
+        // reasoning and answer instantly. Models that ignore it (e.g.
+        // qwen-claude-opus) still think, so the budget must be large enough for
+        // them to FINISH reasoning and emit the title in `content` — otherwise
+        // content stays empty and no title is produced. We must reuse the chat's
+        // already-loaded model, so we give it room instead of switching models.
+        chat_template_kwargs: { enable_thinking: false },
+        max_tokens: 512,
       }),
     });
 
     const data = await upstream.json();
     const msg = data.choices?.[0]?.message;
-    const title = (msg?.content || msg?.reasoning_content || '').trim();
+    // Never fall back to reasoning_content: that is the raw thinking, not a title.
+    const raw = msg?.content || '';
+    // Strip any stray <think> block in case the template still inlines it,
+    // including an unterminated one (when the budget cut off mid-thought).
+    const title = raw
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/<think>[\s\S]*$/i, '')
+      .replace(/^["'\s]+|["'\s]+$/g, '')
+      .trim();
 
     res.json({ title: title.slice(0, 80) || null });
   } catch (err) {

@@ -95,6 +95,17 @@ function getChat(id) {
   return apiFetch(`/api/chats/${id}`);
 }
 
+function getSettings() {
+  return apiFetch('/api/settings');
+}
+
+function saveSettings(partial) {
+  return apiFetch('/api/settings', {
+    method: 'PUT',
+    body: JSON.stringify(partial),
+  });
+}
+
 export {
   apiFetch,
   getModels,
@@ -110,4 +121,6 @@ export {
   generateTitle,
   listChats,
   getChat,
+  getSettings,
+  saveSettings,
 };
