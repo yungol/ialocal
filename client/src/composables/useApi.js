@@ -106,8 +106,12 @@ function saveSettings(partial) {
   });
 }
 
-function listImages() {
-  return apiFetch('/api/images');
+function listImages(limit, offset) {
+  const params = new URLSearchParams();
+  if (limit != null) params.set('limit', limit);
+  if (offset != null) params.set('offset', offset);
+  const qs = params.toString();
+  return apiFetch(`/api/images${qs ? '?' + qs : ''}`);
 }
 
 function saveImage(b64_json, prompt, model) {

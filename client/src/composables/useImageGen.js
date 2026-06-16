@@ -79,14 +79,15 @@ async function getImageModels() {
   return (data.models || []).filter((m) => m.type === 'image');
 }
 
-async function getSavedImages() {
-  const data = await apiFetch('/api/images');
-  return (data.images || []).map((img) => ({
+async function getSavedImages({ limit, offset } = {}) {
+  const data = await apiFetch(`/api/images?${new URLSearchParams({ limit: limit ?? 20, offset: offset ?? 0 })}`);
+  const images = (data.images || []).map((img) => ({
     id: img.id,
     url: `/images/${img.id}.png`,
     prompt: img.prompt,
     createdAt: img.createdAt,
   }));
+  return { images, total: data.total ?? data.images?.length ?? 0 };
 }
 
 async function deleteImage(id) {

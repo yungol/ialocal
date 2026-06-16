@@ -85,7 +85,7 @@
       </div>
 
       <div class="flex-1 overflow-y-auto px-5 py-5">
-        <ImageGallery :images="images" :generating="generating" @delete="onDelete" />
+        <ImageGallery :images="images" :generating="generating" :has-more="hasMore" :loading-more="loadingMore" @delete="onDelete" @load-more="loadMore" />
       </div>
     </section>
   </div>
@@ -122,7 +122,14 @@ export default {
       statusMsg: '',
       statusError: false,
       images: [],
+      totalImages: 0,
+      loadingMore: false,
     };
+  },
+  computed: {
+    hasMore() {
+      return this.images.length < this.totalImages;
+    },
   },
   watch: {
     model(val) {
@@ -135,7 +142,9 @@ export default {
   },
   async mounted() {
     try {
-      this.images = await getSavedImages();
+      const result = await getSavedImages({ limit: 20, offset: 0 });
+      this.images = result.images;
+      this.totalImages = result.total;
     } catch {
       // ignore
     }
@@ -183,8 +192,22 @@ export default {
       try {
         await deleteAllImages();
         this.images = [];
+        this.totalImages = 0;
       } catch {
         // ignore
+      }
+    },
+    async loadMore() {
+      if (this.loadingMore || !this.hasMore) return;
+      this.loadingMore = true;
+      try {
+        const result = await getSavedImages({ limit: 20, offset: this.images.length });
+        this.images = [...this.images, ...result.images];
+        this.totalImages = result.total;
+      } catch {
+        // ignore
+      } finally {
+        this.loadingMore = false;
       }
     },
   },

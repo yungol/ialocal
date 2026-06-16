@@ -34,10 +34,16 @@ function generateId() {
   return crypto.randomBytes(8).toString('hex');
 }
 
-// List all saved images
-router.get('/images', (_req, res) => {
+// List saved images (paginated)
+router.get('/images', (req, res) => {
+  const limit = Math.max(1, parseInt(req.query.limit, 10) || 20);
+  const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+
   const index = readIndex();
-  res.json({ images: index });
+  const total = index.length;
+  const images = index.slice(offset, offset + limit);
+
+  res.json({ images, total });
 });
 
 // Save a generated image

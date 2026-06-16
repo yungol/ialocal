@@ -68,6 +68,19 @@
           </figure>
         </div>
       </div>
+
+      <!-- Load more -->
+      <div v-if="hasMore" class="flex justify-center mt-4">
+        <button
+          class="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 rounded-lg px-5 py-3 text-[13px] font-medium transition-colors disabled:opacity-50"
+          :disabled="loadingMore"
+          @click="$emit('load-more')"
+        >
+          <span v-if="loadingMore" class="material-icons text-[18px] animate-spin">autorenew</span>
+          <span v-else class="material-icons text-[18px]">expand_more</span>
+          {{ loadingMore ? 'Cargando...' : 'Cargar mas imagenes' }}
+        </button>
+      </div>
     </div>
 
     <!-- Lightbox -->
@@ -123,8 +136,10 @@ export default {
   props: {
     images: { type: Array, default: () => [] },
     generating: { type: Boolean, default: false },
+    hasMore: { type: Boolean, default: false },
+    loadingMore: { type: Boolean, default: false },
   },
-  emits: ['delete'],
+  emits: ['delete', 'load-more'],
   data() {
     return {
       lightbox: null,
