@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full">
+  <div ref="container" class="h-full">
     <!-- Empty state -->
     <div
       v-if="images.length === 0 && !generating"
@@ -12,49 +12,62 @@
       <p class="text-neutral-600 text-xs mt-1">Escribi un prompt y genera tu primera imagen.</p>
     </div>
 
-    <!-- Uniform grid (row-major order, equal cells) -->
-    <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+    <div v-else>
       <!-- Generating skeleton -->
       <div
         v-if="generating"
-        class="rounded-xl bg-neutral-900 border border-neutral-800 aspect-square flex flex-col items-center justify-center gap-3 animate-pulse"
+        class="mb-4 rounded-xl bg-neutral-900 border border-neutral-800 flex flex-col items-center justify-center gap-3 animate-pulse py-12"
       >
         <span class="material-icons text-[28px] text-indigo-400/80 animate-spin">autorenew</span>
         <span class="text-[11px] text-neutral-500">Generando...</span>
       </div>
 
-      <figure
-        v-for="img in images"
-        :key="img.id"
-        class="aspect-square rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 relative group cursor-zoom-in transition-all hover:border-neutral-700 hover:ring-1 hover:ring-indigo-500/30"
-        @click="openLightbox(img)"
-      >
-        <img :src="img.url" :alt="img.prompt" class="w-full h-full object-cover block transition-transform duration-300 group-hover:scale-[1.04]" loading="lazy" />
-
-        <!-- Hover overlay -->
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-
-        <div class="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            class="bg-black/50 backdrop-blur hover:bg-black/70 text-neutral-200 rounded-lg p-1.5 transition-colors"
-            title="Descargar"
-            @click.stop="downloadImage(img)"
+      <!-- Masonry columns -->
+      <div class="flex gap-4 items-start">
+        <div
+          v-for="(col, ci) in columns"
+          :key="ci"
+          class="flex-1 flex flex-col gap-4 min-w-0"
+        >
+          <figure
+            v-for="img in col"
+            :key="img.id"
+            class="rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 relative group cursor-zoom-in transition-all hover:border-neutral-700 hover:ring-1 hover:ring-indigo-500/30"
+            @click="openLightbox(img)"
           >
-            <span class="material-icons text-[16px]">download</span>
-          </button>
-          <button
-            class="bg-black/50 backdrop-blur hover:bg-red-600 text-neutral-200 rounded-lg p-1.5 transition-colors"
-            title="Eliminar"
-            @click.stop="$emit('delete', img.id)"
-          >
-            <span class="material-icons text-[16px]">delete</span>
-          </button>
+            <img
+              :src="img.url"
+              :alt="img.prompt"
+              class="w-full h-auto block transition-transform duration-300 group-hover:scale-[1.04]"
+              loading="lazy"
+            />
+
+            <!-- Hover overlay -->
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+            <div class="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                class="bg-black/50 backdrop-blur hover:bg-black/70 text-neutral-200 rounded-lg p-1.5 transition-colors"
+                title="Descargar"
+                @click.stop="downloadImage(img)"
+              >
+                <span class="material-icons text-[16px]">download</span>
+              </button>
+              <button
+                class="bg-black/50 backdrop-blur hover:bg-red-600 text-neutral-200 rounded-lg p-1.5 transition-colors"
+                title="Eliminar"
+                @click.stop="$emit('delete', img.id)"
+              >
+                <span class="material-icons text-[16px]">delete</span>
+              </button>
+            </div>
+
+            <figcaption class="absolute bottom-0 inset-x-0 p-3 text-[11px] text-neutral-200 line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              {{ img.prompt }}
+            </figcaption>
+          </figure>
         </div>
-
-        <figcaption class="absolute bottom-0 inset-x-0 p-3 text-[11px] text-neutral-200 line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          {{ img.prompt }}
-        </figcaption>
-      </figure>
+      </div>
     </div>
 
     <!-- Lightbox -->
@@ -115,19 +128,70 @@ export default {
   data() {
     return {
       lightbox: null,
+      columnCount: 3,
+      imageRatios: {},
     };
+  },
+  computed: {
+    columns() {
+      const cols = Array.from({ length: this.columnCount }, () => []);
+      const heights = Array(this.columnCount).fill(0);
+      for (const img of this.images) {
+        const ratio = this.imageRatios[img.id] || 1.0;
+        let shortest = 0;
+        for (let i = 1; i < this.columnCount; i++) {
+          if (heights[i] < heights[shortest]) shortest = i;
+        }
+        cols[shortest].push(img);
+        heights[shortest] += ratio;
+      }
+      return cols;
+    },
   },
   watch: {
     lightbox(val) {
       document.body.style.overflow = val ? 'hidden' : '';
     },
+    images: {
+      immediate: true,
+      handler(imgs) {
+        const ids = new Set(imgs.map((i) => i.id));
+        for (const id of Object.keys(this.imageRatios)) {
+          if (!ids.has(id)) {
+            const next = { ...this.imageRatios };
+            delete next[id];
+            this.imageRatios = next;
+          }
+        }
+        for (const img of imgs) {
+          if (this.imageRatios[img.id] != null) continue;
+          const preload = new Image();
+          preload.onload = () => {
+            this.imageRatios = {
+              ...this.imageRatios,
+              [img.id]: preload.naturalHeight / preload.naturalWidth,
+            };
+          };
+          preload.src = img.url;
+        }
+      },
+    },
   },
   mounted() {
     window.addEventListener('keydown', this.onKeydown);
+    this.ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      if (w < 640) this.columnCount = 2;
+      else if (w < 1024) this.columnCount = 3;
+      else if (w < 1536) this.columnCount = 4;
+      else this.columnCount = 5;
+    });
+    if (this.$refs.container) this.ro.observe(this.$refs.container);
   },
   beforeUnmount() {
     window.removeEventListener('keydown', this.onKeydown);
     document.body.style.overflow = '';
+    this.ro?.disconnect();
   },
   methods: {
     openLightbox(img) {
