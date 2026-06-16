@@ -99,7 +99,7 @@ import { generateImage, getSavedImages, deleteImage, deleteAllImages } from '../
 
 const MODEL_DEFAULTS = {
   'flux2-klein': { steps: 4, guidance: 1.0, width: 576, height: 1024 },
-  'juggernaut-z': { steps: 8, guidance: 1.5, width: 576, height: 1024 },
+  'juggernaut-z': { steps: 20, guidance: 1, width: 576, height: 1024 },
   sdxl: { steps: 20, guidance: 7.5, width: 576, height: 1024 },
 };
 
