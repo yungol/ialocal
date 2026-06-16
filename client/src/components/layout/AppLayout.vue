@@ -2,7 +2,7 @@
   <div class="flex bg-neutral-950 h-screen overflow-hidden">
     <IconRail :active="activeView" @navigate="onNavigate" />
     <main
-      :class="activeView === 'chat'
+      :class="activeView === 'chat' || activeView === 'images'
         ? 'flex-1 min-w-0 overflow-hidden'
         : 'flex-1 min-w-0 overflow-auto'"
     >

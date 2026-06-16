@@ -5,7 +5,17 @@ const llamaSwap = require('../services/llama-swap');
 const router = express.Router();
 
 function detectType(modelId) {
-  if (modelId.includes('sd') || modelId.includes('flux') || modelId.includes('sdxl')) return 'image';
+  const id = modelId.toLowerCase();
+  if (
+    id.includes('sd') ||
+    id.includes('flux') ||
+    id.includes('sdxl') ||
+    id.includes('juggernaut') ||
+    id.includes('z-image') ||
+    id.includes('zimage')
+  ) {
+    return 'image';
+  }
   return 'llm';
 }
 
@@ -21,6 +31,8 @@ const MODEL_PATHS = {
   'qwen3-8b': '/home/juan/models/Qwen3-8B-Q4_K_M.gguf',
   'qwen-claude-opus': '/home/juan/models/Qwen3.5-9B-Claude-Opus-Q4_K_M.gguf',
   'gemma-4-e4b': '/home/juan/models/gemma-4-E4B-it-Q4_K_M.gguf',
+  'flux2-klein': '/home/juan/models/flux-2-klein-4b-Q4_0.gguf',
+  'juggernaut-z': '/home/juan/models/juggernautZ-v10-Q6_K.gguf',
 };
 
 router.get('/models', async (_req, res) => {

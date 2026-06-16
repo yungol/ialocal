@@ -11,7 +11,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': backend,
-      '/v1': backend
+      '/v1': backend,
+      '/images': backend
     }
   }
 })

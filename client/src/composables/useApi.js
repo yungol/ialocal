@@ -106,6 +106,25 @@ function saveSettings(partial) {
   });
 }
 
+function listImages() {
+  return apiFetch('/api/images');
+}
+
+function saveImage(b64_json, prompt, model) {
+  return apiFetch('/api/images', {
+    method: 'POST',
+    body: JSON.stringify({ b64_json, prompt, model }),
+  });
+}
+
+function deleteImage(id) {
+  return apiFetch(`/api/images/${id}`, { method: 'DELETE' });
+}
+
+function deleteAllImages() {
+  return apiFetch('/api/images', { method: 'DELETE' });
+}
+
 export {
   apiFetch,
   getModels,
@@ -123,4 +142,8 @@ export {
   getChat,
   getSettings,
   saveSettings,
+  listImages,
+  saveImage,
+  deleteImage,
+  deleteAllImages,
 };

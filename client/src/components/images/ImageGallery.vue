@@ -1,30 +1,106 @@
 <template>
-  <div>
-    <div v-if="images.length === 0" class="text-neutral-500 text-center py-12 text-sm">
-      No hay imagenes generadas todavia.
+  <div class="h-full">
+    <!-- Empty state -->
+    <div
+      v-if="images.length === 0 && !generating"
+      class="h-full min-h-[60vh] flex flex-col items-center justify-center text-center"
+    >
+      <div class="w-16 h-16 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-4">
+        <span class="material-icons text-[32px] text-neutral-700">image</span>
+      </div>
+      <p class="text-neutral-400 text-sm font-medium">Todavia no hay imagenes</p>
+      <p class="text-neutral-600 text-xs mt-1">Escribi un prompt y genera tu primera imagen.</p>
     </div>
-    <div v-else class="grid grid-cols-2 md:grid-cols-3 gap-3">
+
+    <!-- Uniform grid (row-major order, equal cells) -->
+    <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+      <!-- Generating skeleton -->
       <div
-        v-for="(img, i) in images"
-        :key="i"
-        class="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden group relative"
+        v-if="generating"
+        class="rounded-xl bg-neutral-900 border border-neutral-800 aspect-square flex flex-col items-center justify-center gap-3 animate-pulse"
       >
-        <img :src="img.url" :alt="'Generada ' + (i + 1)" class="w-full h-auto" />
-        <div
-          class="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center"
-        >
+        <span class="material-icons text-[28px] text-indigo-400/80 animate-spin">autorenew</span>
+        <span class="text-[11px] text-neutral-500">Generando...</span>
+      </div>
+
+      <figure
+        v-for="img in images"
+        :key="img.id"
+        class="aspect-square rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 relative group cursor-zoom-in transition-all hover:border-neutral-700 hover:ring-1 hover:ring-indigo-500/30"
+        @click="openLightbox(img)"
+      >
+        <img :src="img.url" :alt="img.prompt" class="w-full h-full object-cover block transition-transform duration-300 group-hover:scale-[1.04]" loading="lazy" />
+
+        <!-- Hover overlay -->
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+        <div class="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            class="opacity-0 group-hover:opacity-100 bg-neutral-700 text-neutral-200 px-3 py-1.5 rounded-lg text-[11px] transition-opacity"
-            @click="downloadImage(img.url, i)"
+            class="bg-black/50 backdrop-blur hover:bg-black/70 text-neutral-200 rounded-lg p-1.5 transition-colors"
+            title="Descargar"
+            @click.stop="downloadImage(img)"
           >
-            Descargar
+            <span class="material-icons text-[16px]">download</span>
+          </button>
+          <button
+            class="bg-black/50 backdrop-blur hover:bg-red-600 text-neutral-200 rounded-lg p-1.5 transition-colors"
+            title="Eliminar"
+            @click.stop="$emit('delete', img.id)"
+          >
+            <span class="material-icons text-[16px]">delete</span>
           </button>
         </div>
-        <div class="p-2 text-[11px] text-neutral-500 truncate">
+
+        <figcaption class="absolute bottom-0 inset-x-0 p-3 text-[11px] text-neutral-200 line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {{ img.prompt }}
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- Lightbox -->
+    <Teleport to="body">
+      <div
+        v-if="lightbox"
+        class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+        @click="closeLightbox"
+      >
+        <button
+          class="absolute top-4 right-4 text-neutral-400 hover:text-white transition-colors"
+          @click="closeLightbox"
+        >
+          <span class="material-icons text-[28px]">close</span>
+        </button>
+
+        <div class="flex flex-col lg:flex-row gap-4 max-w-6xl w-full max-h-full" @click.stop>
+          <div class="flex-1 min-h-0 flex items-center justify-center">
+            <img :src="lightbox.url" :alt="lightbox.prompt" class="max-w-full max-h-[80vh] rounded-xl object-contain" />
+          </div>
+
+          <div class="lg:w-72 flex-shrink-0 bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex flex-col gap-3 overflow-y-auto">
+            <div>
+              <span class="text-neutral-500 text-[11px] uppercase tracking-wide">Prompt</span>
+              <p class="text-neutral-200 text-[13px] mt-1 leading-relaxed">{{ lightbox.prompt }}</p>
+            </div>
+            <div class="flex gap-2 mt-auto pt-2">
+              <button
+                class="flex-1 flex items-center justify-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg px-3 py-2 text-[13px] transition-colors"
+                @click="downloadImage(lightbox)"
+              >
+                <span class="material-icons text-[16px]">download</span>
+                Descargar
+              </button>
+              <button
+                class="flex items-center justify-center bg-neutral-800 hover:bg-red-600 text-neutral-200 rounded-lg px-3 py-2 transition-colors"
+                title="Eliminar"
+                @click="deleteFromLightbox"
+              >
+                <span class="material-icons text-[16px]">delete</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -33,13 +109,48 @@ export default {
   name: 'ImageGallery',
   props: {
     images: { type: Array, default: () => [] },
+    generating: { type: Boolean, default: false },
+  },
+  emits: ['delete'],
+  data() {
+    return {
+      lightbox: null,
+    };
+  },
+  watch: {
+    lightbox(val) {
+      document.body.style.overflow = val ? 'hidden' : '';
+    },
+  },
+  mounted() {
+    window.addEventListener('keydown', this.onKeydown);
+  },
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.onKeydown);
+    document.body.style.overflow = '';
   },
   methods: {
-    downloadImage(url, index) {
+    openLightbox(img) {
+      this.lightbox = img;
+    },
+    closeLightbox() {
+      this.lightbox = null;
+    },
+    deleteFromLightbox() {
+      const id = this.lightbox.id;
+      this.closeLightbox();
+      this.$emit('delete', id);
+    },
+    onKeydown(e) {
+      if (e.key === 'Escape') this.closeLightbox();
+    },
+    downloadImage(img) {
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `generada-${index + 1}.png`;
+      a.href = img.url;
+      a.download = `${img.id}.png`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
     },
   },
 };
