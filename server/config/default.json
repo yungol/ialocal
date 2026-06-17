@@ -7,5 +7,19 @@
     "host": "127.0.0.1",
     "port": 8080
   },
+  "comfyui": {
+    "host": "127.0.0.1",
+    "port": 8188,
+    "command": "python3",
+    "args": ["/home/juan/comfyui/main.py", "--enable-manager"],
+    "cwd": "/home/juan/comfyui",
+    "processMatch": "comfyui/main.py",
+    "startTimeoutMs": 180000,
+    "stopTimeoutMs": 30000
+  },
+  "gpu": {
+    "safeUsedMb": 2500,
+    "freeWaitMs": 30000
+  },
   "modelsDir": "/home/juan/models"
 }

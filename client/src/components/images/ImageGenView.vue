@@ -23,6 +23,17 @@
             @keydown.ctrl.enter="generate"
             @keydown.meta.enter="generate"
           ></textarea>
+          <button
+            class="self-start flex items-center gap-1.5 rounded-lg border border-neutral-700 bg-neutral-900 hover:border-indigo-500/60 text-neutral-300 px-2.5 py-1.5 text-[12px] transition-colors disabled:opacity-50"
+            :disabled="enhancing || generating || !prompt.trim()"
+            title="Mejora y traduce tu prompt al ingles con gemma4"
+            @click="enhancePrompt"
+          >
+            <span class="material-icons text-[15px]" :class="enhancing ? 'animate-spin' : ''">
+              {{ enhancing ? 'autorenew' : 'auto_fix_high' }}
+            </span>
+            {{ enhancing ? 'Mejorando...' : 'Mejorar prompt' }}
+          </button>
         </label>
 
         <label class="flex flex-col gap-1.5">
@@ -68,26 +79,48 @@
     <!-- Gallery -->
     <section class="flex-1 min-w-0 flex flex-col">
       <div class="px-5 py-3.5 border-b border-neutral-800/70 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <h3 class="text-sm font-medium text-neutral-200">Galeria</h3>
-          <span v-if="images.length" class="text-[11px] text-neutral-500 bg-neutral-900 border border-neutral-800 rounded-full px-2 py-0.5">
-            {{ images.length }}
-          </span>
+        <div class="flex items-center gap-0.5 bg-neutral-900 border border-neutral-800 rounded-lg p-0.5">
+          <button
+            class="px-3 py-1 rounded-md text-[12px] font-medium transition-colors"
+            :class="galleryMode === 'images' ? 'bg-neutral-800 text-neutral-100' : 'text-neutral-500 hover:text-neutral-300'"
+            @click="galleryMode = 'images'"
+          >
+            Imagenes
+          </button>
+          <button
+            class="px-3 py-1 rounded-md text-[12px] font-medium transition-colors"
+            :class="galleryMode === 'videos' ? 'bg-neutral-800 text-neutral-100' : 'text-neutral-500 hover:text-neutral-300'"
+            @click="switchToVideos"
+          >
+            Videos
+          </button>
         </div>
-        <button
-          v-if="images.length"
-          class="flex items-center gap-1 text-neutral-500 hover:text-red-400 text-[11px] transition-colors"
-          @click="onDeleteAll"
-        >
-          <span class="material-icons text-[14px]">delete_sweep</span>
-          Eliminar todas
-        </button>
+        <div class="flex items-center gap-3">
+          <button
+            class="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 rounded-lg px-3 py-1.5 text-[12px] transition-colors"
+            @click="openVideoModal(null)"
+          >
+            <span class="material-icons text-[15px] text-indigo-400">movie_filter</span>
+            Crear video
+          </button>
+          <button
+            v-if="galleryMode === 'images' && images.length"
+            class="flex items-center gap-1 text-neutral-500 hover:text-red-400 text-[11px] transition-colors"
+            @click="onDeleteAll"
+          >
+            <span class="material-icons text-[14px]">delete_sweep</span>
+            Eliminar todas
+          </button>
+        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto px-5 py-5">
-        <ImageGallery :images="images" :generating="generating" :has-more="hasMore" :loading-more="loadingMore" @delete="onDelete" @load-more="loadMore" />
+        <ImageGallery v-if="galleryMode === 'images'" :images="images" :generating="generating" :has-more="hasMore" :loading-more="loadingMore" @delete="onDelete" @load-more="loadMore" @create-video="openVideoModal" />
+        <VideoGallery v-else :videos="videos" :has-more="hasMoreVideos" :loading-more="loadingMoreVideos" @delete="onDeleteVideo" @load-more="loadMoreVideos" />
       </div>
     </section>
+
+    <VideoGenModal :open="videoModalOpen" :source-image="videoSource" @close="videoModalOpen = false" @created="onVideoCreated" />
   </div>
 </template>
 
@@ -95,7 +128,10 @@
 import ImageModelSelector from './ImageModelSelector.vue';
 import ImageParams from './ImageParams.vue';
 import ImageGallery from './ImageGallery.vue';
-import { generateImage, getSavedImages, deleteImage, deleteAllImages } from '../../composables/useImageGen';
+import VideoGallery from './VideoGallery.vue';
+import VideoGenModal from './VideoGenModal.vue';
+import { generateImage, enhanceImagePrompt, getSavedImages, deleteImage, deleteAllImages } from '../../composables/useImageGen';
+import { getSavedVideos, deleteVideo } from '../../composables/useVideoGen';
 
 const MODEL_DEFAULTS = {
   'flux2-klein': { steps: 4, guidance: 1.0, width: 576, height: 1024 },
@@ -107,9 +143,16 @@ const GLOBAL_DEFAULTS = { steps: 20, guidance: 7.5, seed: -1, width: 576, height
 
 export default {
   name: 'ImageGenView',
-  components: { ImageModelSelector, ImageParams, ImageGallery },
+  components: { ImageModelSelector, ImageParams, ImageGallery, VideoGallery, VideoGenModal },
   data() {
     return {
+      galleryMode: 'images',
+      videoModalOpen: false,
+      videoSource: null,
+      videos: [],
+      totalVideos: 0,
+      videosLoaded: false,
+      loadingMoreVideos: false,
       model: '',
       prompt: '',
       negativePrompt: '',
@@ -119,6 +162,7 @@ export default {
       width: GLOBAL_DEFAULTS.width,
       height: GLOBAL_DEFAULTS.height,
       generating: false,
+      enhancing: false,
       statusMsg: '',
       statusError: false,
       images: [],
@@ -129,6 +173,9 @@ export default {
   computed: {
     hasMore() {
       return this.images.length < this.totalImages;
+    },
+    hasMoreVideos() {
+      return this.videos.length < this.totalVideos;
     },
   },
   watch: {
@@ -150,6 +197,65 @@ export default {
     }
   },
   methods: {
+    openVideoModal(image) {
+      this.videoSource = image || null;
+      this.videoModalOpen = true;
+    },
+    async enhancePrompt() {
+      if (this.enhancing || this.generating || !this.prompt.trim()) return;
+      this.enhancing = true;
+      this.statusMsg = '';
+      this.statusError = false;
+      try {
+        this.prompt = await enhanceImagePrompt(this.prompt);
+      } catch (err) {
+        this.statusMsg = err.message || 'No se pudo mejorar el prompt';
+        this.statusError = true;
+      } finally {
+        this.enhancing = false;
+      }
+    },
+    async switchToVideos() {
+      this.galleryMode = 'videos';
+      if (!this.videosLoaded) await this.loadVideos();
+    },
+    async loadVideos() {
+      try {
+        const result = await getSavedVideos({ limit: 10, offset: 0 });
+        this.videos = result.videos;
+        this.totalVideos = result.total;
+        this.videosLoaded = true;
+      } catch {
+        // ignore
+      }
+    },
+    async loadMoreVideos() {
+      if (this.loadingMoreVideos || !this.hasMoreVideos) return;
+      this.loadingMoreVideos = true;
+      try {
+        const result = await getSavedVideos({ limit: 10, offset: this.videos.length });
+        this.videos = [...this.videos, ...result.videos];
+        this.totalVideos = result.total;
+      } catch {
+        // ignore
+      } finally {
+        this.loadingMoreVideos = false;
+      }
+    },
+    async onDeleteVideo(id) {
+      try {
+        await deleteVideo(id);
+        this.videos = this.videos.filter((v) => v.id !== id);
+        this.totalVideos = Math.max(0, this.totalVideos - 1);
+      } catch {
+        // ignore
+      }
+    },
+    onVideoCreated() {
+      // Refresh the video list so a freshly generated video shows up.
+      this.videosLoaded = false;
+      if (this.galleryMode === 'videos') this.loadVideos();
+    },
     async generate() {
       if (this.generating || !this.prompt.trim() || !this.model) return;
       this.generating = true;

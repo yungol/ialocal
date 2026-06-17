@@ -12,7 +12,8 @@ export default defineConfig({
     proxy: {
       '/api': backend,
       '/v1': backend,
-      '/images': backend
+      '/images': backend,
+      '/videos': backend
     }
   }
 })

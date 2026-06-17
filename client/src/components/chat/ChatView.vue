@@ -28,7 +28,7 @@
     </div>
 
     <MessageList :messages="messages" :streaming="streaming" />
-    <ChatInput :disabled="streaming" :show-quick-actions="messages.length === 0" @send="onSend" />
+    <ChatInput :disabled="streaming" :show-quick-actions="messages.length === 0" :vision="selectedVision" @send="onSend" />
   </div>
 </template>
 
@@ -47,6 +47,14 @@ export default {
     pollTick: { type: Number, default: 0 },
   },
   emits: ['title-changed', 'chat-created', 'turn-complete'],
+  computed: {
+    // True when the currently selected model is vision-capable (loaded with an
+    // mmproj). Drives the image-attach button in ChatInput.
+    selectedVision() {
+      const m = this.availableModels.find((x) => x.id === this.model);
+      return !!(m && m.vision);
+    },
+  },
   data() {
     return {
       title: '',
@@ -200,7 +208,22 @@ export default {
       }
       this.messages = [];
     },
-    onSend(content) {
+    // Build the OpenAI-format messages sent upstream. User turns that carry an
+    // attached image become multimodal content arrays (text + image_url).
+    buildApiMessages(conversation) {
+      return conversation
+        .filter((m) => (m.content && m.content !== '') || m.image)
+        .map((m) => {
+          if (m.role === 'user' && m.image) {
+            const parts = [];
+            if (m.content) parts.push({ type: 'text', text: m.content });
+            parts.push({ type: 'image_url', image_url: { url: m.image } });
+            return { role: 'user', content: parts };
+          }
+          return { role: m.role, content: m.content };
+        });
+    },
+    onSend({ content, image }) {
       if (!this.model) {
         this.statusMessage = 'Selecciona un modelo primero.';
         this.statusType = 'error';
@@ -215,7 +238,7 @@ export default {
       const conversation = this.messages;
 
       this.statusMessage = '';
-      conversation.push({ role: 'user', content });
+      conversation.push({ role: 'user', content, image: image || null });
       conversation.push({ role: 'assistant', content: '', reasoning: '' });
 
       this.streaming = true;
@@ -227,7 +250,7 @@ export default {
 
       streamChat({
         model: targetModel,
-        messages: conversation.filter((m) => m.content !== ''),
+        messages: this.buildApiMessages(conversation),
         onReasoning: (text) => {
           if (onScreen()) this.statusMessage = '';
           const last = conversation[conversation.length - 1];

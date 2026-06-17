@@ -13,8 +13,19 @@
       <!-- USER message -->
       <div v-for="(msg, i) in messages" :key="i">
         <div v-if="msg.role === 'user'" class="flex justify-end">
-          <div class="max-w-[85%] rounded-2xl rounded-br-md bg-neutral-800 px-4 py-2.5 text-[15px] leading-7 text-neutral-100 whitespace-pre-wrap">
-            {{ msg.content }}
+          <div class="max-w-[85%] flex flex-col items-end gap-2">
+            <img
+              v-if="msg.image"
+              :src="msg.image"
+              alt="imagen adjunta"
+              class="max-h-60 w-auto rounded-2xl rounded-br-md border border-neutral-700 object-cover"
+            />
+            <div
+              v-if="msg.content"
+              class="rounded-2xl rounded-br-md bg-neutral-800 px-4 py-2.5 text-[15px] leading-7 text-neutral-100 whitespace-pre-wrap"
+            >
+              {{ msg.content }}
+            </div>
           </div>
         </div>
 

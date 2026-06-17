@@ -74,6 +74,16 @@ async function generateImage({
   return results;
 }
 
+// Send the user's text to the backend, which uses gemma4 to turn it into a
+// richer, well-structured English image-generation prompt.
+async function enhanceImagePrompt(prompt) {
+  const data = await apiFetch('/api/enhance-image-prompt', {
+    method: 'POST',
+    body: JSON.stringify({ prompt }),
+  });
+  return data.prompt;
+}
+
 async function getImageModels() {
   const data = await apiFetch('/api/models');
   return (data.models || []).filter((m) => m.type === 'image');
@@ -100,4 +110,11 @@ async function deleteAllImages() {
   return delAll();
 }
 
-export { generateImage, getImageModels, getSavedImages, deleteImage, deleteAllImages };
+export {
+  generateImage,
+  enhanceImagePrompt,
+  getImageModels,
+  getSavedImages,
+  deleteImage,
+  deleteAllImages,
+};

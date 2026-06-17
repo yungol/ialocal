@@ -8,6 +8,8 @@ const chatRouter = require('./routes/chat');
 const generateRouter = require('./routes/generate');
 const settingsRouter = require('./routes/settings');
 const imagesRouter = require('./routes/images');
+const videoRouter = require('./routes/video');
+const gpu = require('./services/gpu');
 
 const app = express();
 
@@ -25,8 +27,24 @@ app.use('/api', chatRouter);
 app.use('/api', generateRouter);
 app.use('/api', settingsRouter);
 app.use('/api', imagesRouter);
+app.use('/api', videoRouter);
 app.use('/images', express.static(path.join(__dirname, '..', 'data', 'images')));
-app.use('/v1', proxyRouter);
+app.use('/videos', express.static(path.join(__dirname, '..', 'data', 'videos')));
+
+// Any llama-swap traffic (chat + image generation) needs the GPU in llama
+// mode. requireLlama stops ComfyUI first; it is a no-op when ComfyUI is down.
+app.use(
+  '/v1',
+  async (_req, _res, next) => {
+    try {
+      await gpu.requireLlama();
+    } catch {
+      // best effort; let the request proceed
+    }
+    next();
+  },
+  proxyRouter,
+);
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '..', '..', 'client', 'dist')));

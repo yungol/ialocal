@@ -19,26 +19,51 @@
         </button>
       </div>
       <div
-        class="flex items-end gap-2 bg-neutral-900 border border-neutral-700/70 rounded-2xl px-3 py-2 transition-colors focus-within:border-neutral-500"
+        class="bg-neutral-900 border border-neutral-700/70 rounded-2xl px-3 py-2 transition-colors focus-within:border-neutral-500"
       >
-        <textarea
-          ref="input"
-          v-model="text"
-          class="flex-1 bg-transparent text-neutral-100 text-[15px] leading-7 resize-none focus:outline-none placeholder-neutral-500 py-1.5 px-1.5 max-h-40"
-          rows="1"
-          placeholder="Escribi un mensaje..."
-          :disabled="disabled"
-          @input="autoGrow"
-          @keydown.enter.exact.prevent="send"
-        ></textarea>
-        <button
-          class="flex items-center justify-center w-9 h-9 rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-25 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-          :disabled="disabled || !text.trim()"
-          @click="send"
-          aria-label="Enviar"
-        >
-          <span class="material-icons text-[20px]">arrow_upward</span>
-        </button>
+        <!-- Attached image preview -->
+        <div v-if="image" class="relative inline-block mb-2">
+          <img :src="image" alt="adjunto" class="h-20 w-auto rounded-lg border border-neutral-700 object-cover" />
+          <button
+            class="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-neutral-800 ring-1 ring-neutral-600 text-neutral-300 hover:text-white hover:bg-red-600 transition-colors"
+            title="Quitar imagen"
+            @click="clearImage"
+          >
+            <span class="material-icons text-[14px]">close</span>
+          </button>
+        </div>
+
+        <div class="flex items-end gap-2">
+          <button
+            v-if="vision"
+            class="flex items-center justify-center w-9 h-9 rounded-xl text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors flex-shrink-0"
+            :disabled="disabled"
+            title="Adjuntar imagen"
+            @click="$refs.file.click()"
+          >
+            <span class="material-icons text-[20px]">add_photo_alternate</span>
+          </button>
+          <input ref="file" type="file" accept="image/*" class="hidden" @change="onFile" />
+
+          <textarea
+            ref="input"
+            v-model="text"
+            class="flex-1 bg-transparent text-neutral-100 text-[15px] leading-7 resize-none focus:outline-none placeholder-neutral-500 py-1.5 px-1.5 max-h-40"
+            rows="1"
+            :placeholder="vision ? 'Escribi un mensaje o adjunta una imagen...' : 'Escribi un mensaje...'"
+            :disabled="disabled"
+            @input="autoGrow"
+            @keydown.enter.exact.prevent="send"
+          ></textarea>
+          <button
+            class="flex items-center justify-center w-9 h-9 rounded-xl bg-neutral-100 text-neutral-900 hover:bg-white disabled:opacity-25 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            :disabled="disabled || (!text.trim() && !image)"
+            @click="send"
+            aria-label="Enviar"
+          >
+            <span class="material-icons text-[20px]">arrow_upward</span>
+          </button>
+        </div>
       </div>
       <p class="text-center text-[11px] text-neutral-600 mt-2">
         Enter para enviar &middot; Shift + Enter para nueva linea
@@ -53,14 +78,35 @@ export default {
   props: {
     disabled: { type: Boolean, default: false },
     showQuickActions: { type: Boolean, default: false },
+    vision: { type: Boolean, default: false },
   },
   emits: ['send'],
   data() {
     return {
       text: '',
+      image: '',
     };
   },
+  watch: {
+    // If the user switches to a non-vision model, drop any pending image.
+    vision(val) {
+      if (!val) this.clearImage();
+    },
+  },
   methods: {
+    onFile(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.image = reader.result;
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    },
+    clearImage() {
+      this.image = '';
+    },
     autoGrow() {
       const el = this.$refs.input;
       if (!el) return;
@@ -80,9 +126,10 @@ export default {
     },
     send() {
       const content = this.text.trim();
-      if (!content || this.disabled) return;
-      this.$emit('send', content);
+      if ((!content && !this.image) || this.disabled) return;
+      this.$emit('send', { content, image: this.image || null });
       this.text = '';
+      this.image = '';
       this.$nextTick(() => {
         const el = this.$refs.input;
         if (el) el.style.height = 'auto';

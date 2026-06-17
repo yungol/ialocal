@@ -19,6 +19,13 @@ function detectType(modelId) {
   return 'llm';
 }
 
+// Vision-capable LLMs (loaded with an mmproj projector). The chat UI uses this
+// flag to show the image-attach button only for these models.
+function detectVision(modelId) {
+  const id = modelId.toLowerCase();
+  return id.includes('vision') || id.includes('-vl') || id.endsWith('vl');
+}
+
 function getDiskSize(modelPath) {
   try {
     return fs.statSync(modelPath).size;
@@ -33,6 +40,7 @@ const MODEL_PATHS = {
   'gemma-4-e4b': '/home/juan/models/gemma-4-E4B-it-Q4_K_M.gguf',
   'flux2-klein': '/home/juan/models/flux-2-klein-4b-Q4_0.gguf',
   'juggernaut-z': '/home/juan/models/juggernautZ-v10-Q6_K.gguf',
+  'gemma4-vision': '/home/juan/models/gemma-4-E4B-it-Q4_K_M.gguf',
 };
 
 router.get('/models', async (_req, res) => {
@@ -42,6 +50,7 @@ router.get('/models', async (_req, res) => {
       id: m.id,
       name: m.id,
       type: detectType(m.id),
+      vision: detectVision(m.id),
       status: 'unloaded',
       size: getDiskSize(MODEL_PATHS[m.id]),
     }));
@@ -51,6 +60,7 @@ router.get('/models', async (_req, res) => {
       id,
       name: id,
       type: detectType(id),
+      vision: detectVision(id),
       status: 'unloaded',
       size: getDiskSize(modelPath),
     }));

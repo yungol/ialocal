@@ -107,6 +107,13 @@
               <span class="text-neutral-500 text-[11px] uppercase tracking-wide">Prompt</span>
               <p class="text-neutral-200 text-[13px] mt-1 leading-relaxed">{{ lightbox.prompt }}</p>
             </div>
+            <button
+              class="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-3 py-2 text-[13px] font-medium transition-colors"
+              @click="createVideoFromLightbox"
+            >
+              <span class="material-icons text-[16px]">movie_filter</span>
+              Crear video
+            </button>
             <div class="flex gap-2 mt-auto pt-2">
               <button
                 class="flex-1 flex items-center justify-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg px-3 py-2 text-[13px] transition-colors"
@@ -139,7 +146,7 @@ export default {
     hasMore: { type: Boolean, default: false },
     loadingMore: { type: Boolean, default: false },
   },
-  emits: ['delete', 'load-more'],
+  emits: ['delete', 'load-more', 'create-video'],
   data() {
     return {
       lightbox: null,
@@ -219,6 +226,11 @@ export default {
       const id = this.lightbox.id;
       this.closeLightbox();
       this.$emit('delete', id);
+    },
+    createVideoFromLightbox() {
+      const img = this.lightbox;
+      this.closeLightbox();
+      this.$emit('create-video', img);
     },
     onKeydown(e) {
       if (e.key === 'Escape') this.closeLightbox();
