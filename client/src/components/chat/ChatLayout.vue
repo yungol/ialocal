@@ -1,6 +1,9 @@
 <template>
   <div class="flex h-full">
-    <aside class="w-72 bg-neutral-950 border-r border-neutral-800/70 flex flex-col flex-shrink-0">
+    <aside
+      class="bg-neutral-950 border-r border-neutral-800/70 flex flex-col flex-shrink-0 transition-all duration-300 overflow-hidden"
+      :class="sidebarOpen ? 'w-72' : 'w-0 border-r-0'"
+    >
       <ChatList
         :chats="chats"
         :active-id="chatId"
@@ -23,6 +26,8 @@
         ref="chatView"
         :chat-id="chatId"
         :poll-tick="pollTick"
+        :sidebar-open="sidebarOpen"
+        @toggle-sidebar="sidebarOpen = !sidebarOpen"
         @title-changed="onTitleChanged"
         @chat-created="onChatCreated"
         @turn-complete="loadChatList"
@@ -45,6 +50,7 @@ export default {
       chats: [],
       pollTick: 0,
       error: '',
+      sidebarOpen: true,
     };
   },
   mounted() {

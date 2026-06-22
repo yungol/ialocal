@@ -1,7 +1,14 @@
 <template>
   <div class="flex flex-col h-full bg-neutral-950">
-    <header class="flex items-center justify-between gap-4 px-6 h-14 border-b border-neutral-800/70 flex-shrink-0">
-      <div class="flex items-center gap-3 min-w-0">
+    <header class="flex items-center justify-between gap-4 px-4 h-14 border-b border-neutral-800/70 flex-shrink-0">
+      <div class="flex items-center gap-2 min-w-0">
+        <button
+          class="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-800/50 hover:text-neutral-200 transition-colors flex-shrink-0"
+          :aria-label="sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'"
+          @click="$emit('toggle-sidebar')"
+        >
+          <span class="material-icons text-[20px]">{{ sidebarOpen ? 'first_page' : 'last_page' }}</span>
+        </button>
         <h2 class="text-[15px] font-semibold text-neutral-100 truncate">{{ title || 'Chat' }}</h2>
         <button
           v-if="messages.length > 0"
@@ -45,8 +52,9 @@ export default {
   props: {
     chatId: { type: String, default: null },
     pollTick: { type: Number, default: 0 },
+    sidebarOpen: { type: Boolean, default: true },
   },
-  emits: ['title-changed', 'chat-created', 'turn-complete'],
+  emits: ['title-changed', 'chat-created', 'turn-complete', 'toggle-sidebar'],
   computed: {
     // True when the currently selected model is vision-capable (loaded with an
     // mmproj). Drives the image-attach button in ChatInput.

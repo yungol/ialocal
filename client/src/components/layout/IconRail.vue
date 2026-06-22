@@ -3,12 +3,13 @@
     class="w-16 bg-neutral-950 h-screen flex flex-col items-center py-4 border-r border-neutral-800/70 flex-shrink-0"
   >
     <!-- Brand mark -->
-    <div
-      class="w-9 h-9 rounded-xl bg-neutral-800 ring-1 ring-neutral-700/60 flex items-center justify-center mb-7"
-      title="AI Server Hub"
+    <button
+      class="w-9 h-9 mb-7 flex items-center justify-center flex-shrink-0 rounded-xl hover:opacity-80 transition-opacity"
+      title="HiPanda"
+      @click="$emit('navigate', 'chat')"
     >
-      <span class="material-icons text-neutral-200 text-xl">hub</span>
-    </div>
+      <img src="../../assets/pandaV2.png" alt="HiPanda" class="w-9 h-9" />
+    </button>
 
     <div class="flex flex-col gap-2">
       <button
