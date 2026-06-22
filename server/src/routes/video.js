@@ -245,7 +245,7 @@ router.post('/video/prompt', async (req, res) => {
     if (!action) {
       return res.status(400).json({ error: 'Falta el texto a mejorar' });
     }
-    instruction = `${PROMPT_CONTEXT} The user wants this to happen in the video: "${action}". Turn that into a clear English prompt that makes the AI video model execute exactly that action across the 6 seconds, adding only the motion, timing and visual detail needed for it to look natural and well executed. Stay faithful to the user's intent and to the image — do not invent unrelated actions.`;
+    instruction = `${PROMPT_CONTEXT} The user wants this action to happen in the video: "${action}". Make that action the clear focus of the clip and break it into concrete, physical motion — the same way a strong greeting prompt does: describe exactly how the subject's body performs the action and how it progresses from the first frame to the end of the clip, the facial expression, the secondary motion the action causes (hair, clothing, environment, physics) and a camera behavior that follows and showcases the action. Use vivid, unambiguous motion verbs so the video model clearly executes the action instead of staying static. Stay faithful to the user's intent and keep the character, style and setting consistent with the image — do not add unrelated actions.`;
   } else {
     instruction = PROMPT_INSTRUCTIONS[kind] || PROMPT_INSTRUCTIONS.motion;
   }
