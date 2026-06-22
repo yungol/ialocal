@@ -105,10 +105,10 @@ function buildContextBlock(results) {
   if (!results.length) return '';
   const parts = results.map((r) =>
     r.error
-      ? `[Could not retrieve content from ${r.url}]`
-      : `[Source: ${r.url}] ${r.title}\n${r.text}`,
+      ? `[No se pudo recuperar el contenido de ${r.url}]`
+      : `[Fuente: ${r.url}] ${r.title}\n${r.text}`,
   );
-  return `\n\n---\nThe user included links. Retrieved page content below — use it as context to answer:\n\n${parts.join(
+  return `\n\n---\nEl usuario incluyó enlaces. A continuación está el contenido recuperado de las páginas; úsalo como contexto para responder. Responde en el mismo idioma en que escribe el usuario.\n\n${parts.join(
     '\n\n',
   )}\n---`;
 }
@@ -162,4 +162,9 @@ module.exports = {
   buildContextBlock,
   scrapeUrl,
   enrichChatPayload,
+  // Shared helpers reused by other context enrichers (e.g. searchContext).
+  truncate,
+  withTimeout,
+  getMessageText,
+  appendContext,
 };

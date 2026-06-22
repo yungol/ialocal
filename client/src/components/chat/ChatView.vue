@@ -231,7 +231,7 @@ export default {
           return { role: m.role, content: m.content };
         });
     },
-    onSend({ content, image }) {
+    onSend({ content, image, webSearch }) {
       if (!this.model) {
         this.statusMessage = 'Selecciona un modelo primero.';
         this.statusType = 'error';
@@ -250,7 +250,7 @@ export default {
       conversation.push({ role: 'assistant', content: '', reasoning: '' });
 
       this.streaming = true;
-      this.statusMessage = 'cargando modelo...';
+      this.statusMessage = webSearch ? 'Buscando en internet...' : 'cargando modelo...';
       this.statusType = 'loading';
 
       // Status/streaming flags belong to the on-screen chat only.
@@ -259,6 +259,7 @@ export default {
       streamChat({
         model: targetModel,
         messages: this.buildApiMessages(conversation),
+        webSearch,
         onReasoning: (text) => {
           if (onScreen()) this.statusMessage = '';
           const last = conversation[conversation.length - 1];
@@ -268,9 +269,19 @@ export default {
           this.persist(targetId, conversation, targetModel);
         },
         onToken: (text) => {
+          if (onScreen()) this.statusMessage = '';
           const last = conversation[conversation.length - 1];
           if (last && last.role === 'assistant') {
             last.content += text;
+          }
+          this.persist(targetId, conversation, targetModel);
+        },
+        onSources: (sources) => {
+          // Search finished and results arrived; model is about to respond.
+          if (onScreen()) this.statusMessage = 'Resultados de internet listos, generando respuesta...';
+          const last = conversation[conversation.length - 1];
+          if (last && last.role === 'assistant') {
+            last.sources = sources;
           }
           this.persist(targetId, conversation, targetModel);
         },

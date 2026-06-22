@@ -1,6 +1,7 @@
 const express = require('express');
 const config = require('../../config/default.json');
 const { enrichChatPayload } = require('../services/urlContext');
+const { enrichWithSearch } = require('../services/searchContext');
 
 const router = express.Router();
 const BASE_URL = `http://${config.llamaSwap.host}:${config.llamaSwap.port}`;
@@ -24,6 +25,9 @@ router.use(async (req, res) => {
     headers,
   };
 
+  // Web search sources surfaced to the client via a custom SSE event.
+  let searchSources = [];
+
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     let payload = req.body;
     if (
@@ -32,9 +36,16 @@ router.use(async (req, res) => {
       typeof req.body === 'object'
     ) {
       try {
-        payload = await enrichChatPayload(req.body);
+        payload = await enrichChatPayload(req.body); // URL scraping (auto)
+        const searched = await enrichWithSearch(payload); // web search (gated)
+        payload = searched.payload;
+        searchSources = searched.sources;
       } catch {
         payload = req.body; // graceful degradation: never break the chat
+      }
+      // Safety net: the flag must never reach llama-swap.
+      if (payload && typeof payload === 'object' && 'web_search' in payload) {
+        delete payload.web_search;
       }
     }
     const body = typeof payload === 'string' ? payload : JSON.stringify(payload);
@@ -49,6 +60,11 @@ router.use(async (req, res) => {
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     });
+
+    // Emit web search sources first so the client can attach them to the turn.
+    if (searchSources.length) {
+      res.write(`data: ${JSON.stringify({ sources: searchSources })}\n\n`);
+    }
 
     const reader = upstream.body.getReader();
     try {

@@ -35,6 +35,18 @@
 
         <div class="flex items-end gap-2">
           <button
+            class="flex items-center justify-center w-9 h-9 rounded-xl transition-colors flex-shrink-0"
+            :class="webSearch
+              ? 'text-blue-400 bg-blue-500/10 ring-1 ring-blue-500/40'
+              : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800'"
+            :disabled="disabled"
+            :title="webSearch ? 'Búsqueda en internet activada' : 'Buscar en internet'"
+            :aria-pressed="webSearch"
+            @click="webSearch = !webSearch"
+          >
+            <span class="material-icons text-[20px]">travel_explore</span>
+          </button>
+          <button
             v-if="vision"
             class="flex items-center justify-center w-9 h-9 rounded-xl text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors flex-shrink-0"
             :disabled="disabled"
@@ -85,6 +97,7 @@ export default {
     return {
       text: '',
       image: '',
+      webSearch: false,
     };
   },
   watch: {
@@ -127,7 +140,7 @@ export default {
     send() {
       const content = this.text.trim();
       if ((!content && !this.image) || this.disabled) return;
-      this.$emit('send', { content, image: this.image || null });
+      this.$emit('send', { content, image: this.image || null, webSearch: this.webSearch });
       this.text = '';
       this.image = '';
       this.$nextTick(() => {

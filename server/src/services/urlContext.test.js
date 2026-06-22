@@ -41,9 +41,9 @@ test('buildContextBlock formats ok and error results', () => {
     { url: 'https://a.com', title: 'Title A', text: 'clean text' },
     { url: 'https://b.com', error: true },
   ]);
-  assert.match(block, /\[Source: https:\/\/a\.com\] Title A/);
+  assert.match(block, /\[Fuente: https:\/\/a\.com\] Title A/);
   assert.match(block, /clean text/);
-  assert.match(block, /\[Could not retrieve content from https:\/\/b\.com\]/);
+  assert.match(block, /\[No se pudo recuperar el contenido de https:\/\/b\.com\]/);
 });
 
 test('parseJinaMarkdown extracts title and text', () => {
@@ -117,7 +117,7 @@ test('enrichChatPayload injects scraped context into last user message', async (
     scrape: async (url) => ({ url, title: 'T', text: 'body' }),
   });
   assert.match(result.messages[2].content, /resumime https:\/\/a\.com/);
-  assert.match(result.messages[2].content, /\[Source: https:\/\/a\.com\] T/);
+  assert.match(result.messages[2].content, /\[Fuente: https:\/\/a\.com\] T/);
   assert.match(result.messages[2].content, /body/);
   // earlier messages stay intact
   assert.equal(result.messages[0].content, 'viejo');
@@ -142,7 +142,7 @@ test('enrichChatPayload handles multimodal array content', async () => {
   assert.ok(Array.isArray(parts));
   const injected = parts[parts.length - 1];
   assert.equal(injected.type, 'text');
-  assert.match(injected.text, /\[Source: https:\/\/a\.com\]/);
+  assert.match(injected.text, /\[Fuente: https:\/\/a\.com\]/);
   // image part preserved
   assert.ok(parts.some((p) => p.type === 'image_url'));
 });
@@ -156,6 +156,6 @@ test('enrichChatPayload injects error note when scraping fails', async () => {
   });
   assert.match(
     result.messages[0].content,
-    /\[Could not retrieve content from https:\/\/broken\.tld\]/,
+    /\[No se pudo recuperar el contenido de https:\/\/broken\.tld\]/,
   );
 });

@@ -1,13 +1,18 @@
 import { apiFetch } from './useApi';
 
-async function streamChat({ model, messages, onReasoning, onToken, onDone, onError }) {
+async function streamChat({ model, messages, webSearch, onReasoning, onToken, onSources, onDone, onError }) {
   let response;
 
   try {
     response = await fetch('/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, stream: true }),
+      body: JSON.stringify({
+        model,
+        messages,
+        stream: true,
+        ...(webSearch ? { web_search: true } : {}),
+      }),
     });
   } catch {
     onError('No se pudo conectar al servidor. Verifica que el backend este corriendo.');
@@ -55,6 +60,10 @@ async function streamChat({ model, messages, onReasoning, onToken, onDone, onErr
       }
       try {
         const parsed = JSON.parse(data);
+        if (Array.isArray(parsed.sources)) {
+          onSources?.(parsed.sources);
+          continue;
+        }
         const delta = parsed.choices?.[0]?.delta;
         if (delta?.reasoning_content) {
           onReasoning(delta.reasoning_content);

@@ -63,6 +63,40 @@
               v-html="renderMarkdown(msg.content)"
             ></div>
 
+            <!-- Web search sources (collapsible) -->
+            <div
+              v-if="msg.sources && msg.sources.length"
+              class="border border-neutral-800 rounded-xl overflow-hidden"
+            >
+              <button
+                class="w-full flex items-center gap-2 px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300 transition-colors bg-neutral-900/60"
+                @click="toggleSources(i)"
+              >
+                <span class="material-icons text-base transition-transform" :class="sourcesExpanded[i] ? 'rotate-90' : ''">chevron_right</span>
+                <span class="material-icons text-[15px]">travel_explore</span>
+                <span>{{ msg.sources.length }} {{ msg.sources.length === 1 ? 'fuente' : 'fuentes' }}</span>
+              </button>
+              <div
+                v-if="sourcesExpanded[i]"
+                class="px-3.5 pb-3 pt-2.5 border-t border-neutral-800 bg-neutral-900/30 space-y-2"
+              >
+                <component
+                  :is="src.url ? 'a' : 'div'"
+                  v-for="(src, si) in msg.sources"
+                  :key="si"
+                  v-bind="src.url ? { href: src.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
+                  class="flex items-start gap-2 text-[13px]"
+                  :class="src.url ? 'text-blue-400 hover:text-blue-300 group' : 'text-neutral-400'"
+                >
+                  <span class="material-icons text-[14px] mt-0.5 flex-shrink-0">{{ src.url ? 'open_in_new' : 'description' }}</span>
+                  <span class="min-w-0">
+                    <span class="block truncate group-hover:underline">{{ src.title || src.url }}</span>
+                    <span v-if="src.url" class="block truncate text-[11px] text-neutral-500">{{ src.url }}</span>
+                  </span>
+                </component>
+              </div>
+            </div>
+
             <!-- Empty streaming -->
             <div
               v-if="i === messages.length - 1 && streaming && !msg.content && !msg.reasoning"
@@ -91,6 +125,7 @@ export default {
   data() {
     return {
       expanded: {},
+      sourcesExpanded: {},
     };
   },
   watch: {
@@ -112,6 +147,9 @@ export default {
     renderMarkdown,
     toggleReasoning(i) {
       this.expanded[i] = !this.expanded[i];
+    },
+    toggleSources(i) {
+      this.sourcesExpanded[i] = !this.sourcesExpanded[i];
     },
     async onListClick(event) {
       const btn = event.target.closest('.code-copy-btn');
