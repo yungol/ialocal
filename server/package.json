@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "test": "node --test \"src/**/*.test.js\"",
     "lint": "eslint src/",
     "format": "prettier --write src/"
   },
@@ -13,6 +14,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@extractus/article-extractor": "^8.1.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "joi": "^18.2.1"

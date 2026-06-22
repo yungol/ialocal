@@ -1,6 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+
+// Load repo-root .env (e.g. JINA_API_KEY) using Node's native loader.
+try {
+  process.loadEnvFile(path.join(__dirname, '..', '..', '.env'));
+} catch {
+  // .env is optional; scraping fallback still works without an API key.
+}
+
 const modelsRouter = require('./routes/models');
 const statsRouter = require('./routes/stats');
 const proxyRouter = require('./routes/proxy');

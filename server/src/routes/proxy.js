@@ -1,5 +1,6 @@
 const express = require('express');
 const config = require('../../config/default.json');
+const { enrichChatPayload } = require('../services/urlContext');
 
 const router = express.Router();
 const BASE_URL = `http://${config.llamaSwap.host}:${config.llamaSwap.port}`;
@@ -24,8 +25,19 @@ router.use(async (req, res) => {
   };
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    const body =
-      typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    let payload = req.body;
+    if (
+      req.method === 'POST' &&
+      req.originalUrl.endsWith('/chat/completions') &&
+      typeof req.body === 'object'
+    ) {
+      try {
+        payload = await enrichChatPayload(req.body);
+      } catch {
+        payload = req.body; // graceful degradation: never break the chat
+      }
+    }
+    const body = typeof payload === 'string' ? payload : JSON.stringify(payload);
     fetchOptions.body = body;
   }
 
