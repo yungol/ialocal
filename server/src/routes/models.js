@@ -43,6 +43,9 @@ const MODEL_PATHS = {
   'gemma4-vision': '/home/juan/models/gemma-4-E4B-it-Q4_K_M.gguf',
 };
 
+// ComfyUI-based models are not managed by llama-swap; they are injected here.
+const COMFY_MODELS = [];
+
 router.get('/models', async (_req, res) => {
   try {
     const data = await llamaSwap.getModels();
@@ -54,7 +57,7 @@ router.get('/models', async (_req, res) => {
       status: 'unloaded',
       size: getDiskSize(MODEL_PATHS[m.id]),
     }));
-    res.json({ models });
+    res.json({ models: [...models, ...COMFY_MODELS] });
   } catch {
     const fallback = Object.entries(MODEL_PATHS).map(([id, modelPath]) => ({
       id,
@@ -64,7 +67,7 @@ router.get('/models', async (_req, res) => {
       status: 'unloaded',
       size: getDiskSize(modelPath),
     }));
-    res.json({ models: fallback });
+    res.json({ models: [...fallback, ...COMFY_MODELS] });
   }
 });
 

@@ -1,4 +1,5 @@
 <template>
+  <div class="flex-1 relative flex flex-col min-h-0">
   <div ref="list" class="flex-1 overflow-y-auto" @click="onListClick">
     <div class="max-w-3xl mx-auto px-6 py-8 space-y-8">
       <!-- Empty state -->
@@ -111,6 +112,16 @@
       </div>
     </div>
   </div>
+
+  <button
+    v-if="userScrolledUp"
+    class="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs hover:bg-neutral-700 hover:text-neutral-100 transition-colors shadow-lg"
+    @click="scrollToBottom"
+  >
+    <span class="material-icons text-[14px]">arrow_downward</span>
+    Ir al fondo
+  </button>
+  </div>
 </template>
 
 <script>
@@ -121,30 +132,67 @@ export default {
   props: {
     messages: { type: Array, default: () => [] },
     streaming: { type: Boolean, default: false },
+    chatId: { type: String, default: null },
   },
   data() {
     return {
       expanded: {},
       sourcesExpanded: {},
+      userScrolledUp: false,
     };
   },
+  mounted() {
+    this.$refs.list?.addEventListener('scroll', this.onScroll, { passive: true });
+  },
+  beforeUnmount() {
+    this.$refs.list?.removeEventListener('scroll', this.onScroll);
+  },
   watch: {
-    messages: {
-      deep: true,
-      handler() {
+    chatId() {
+      this.userScrolledUp = false;
+      this.$nextTick(() => {
+        const el = this.$refs.list;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    },
+    streaming(val) {
+      if (val) {
+        this.userScrolledUp = false;
         this.$nextTick(() => {
           const el = this.$refs.list;
           if (el) el.scrollTop = el.scrollHeight;
         });
+      }
+    },
+    messages: {
+      deep: true,
+      handler() {
         const lastIdx = this.messages.length - 1;
         if (this.streaming && this.messages[lastIdx]?.reasoning) {
           this.expanded[lastIdx] = true;
+        }
+        if (!this.userScrolledUp) {
+          this.$nextTick(() => {
+            const el = this.$refs.list;
+            if (el) el.scrollTop = el.scrollHeight;
+          });
         }
       },
     },
   },
   methods: {
     renderMarkdown,
+    onScroll() {
+      const el = this.$refs.list;
+      if (!el) return;
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      this.userScrolledUp = distanceFromBottom > 100;
+    },
+    scrollToBottom() {
+      this.userScrolledUp = false;
+      const el = this.$refs.list;
+      if (el) el.scrollTop = el.scrollHeight;
+    },
     toggleReasoning(i) {
       this.expanded[i] = !this.expanded[i];
     },

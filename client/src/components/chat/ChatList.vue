@@ -35,7 +35,7 @@
           </span>
           <span
             class="material-icons text-[16px] text-neutral-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-            @click.stop="$emit('delete', chat.id)"
+            @click.stop="requestDelete(chat.id)"
           >
             close
           </span>
@@ -78,7 +78,7 @@
             </span>
             <button
               class="material-icons text-sm text-neutral-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-              @click.stop="deleteAndRefresh(chat.id)"
+              @click.stop="requestDelete(chat.id)"
             >
               close
             </button>
@@ -89,11 +89,23 @@
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      :open="pendingDeleteId !== null"
+      title="Eliminar chat"
+      message="¿Estás seguro de que querés borrar este chat? Esta acción es permanente y no se puede deshacer."
+      confirm-label="Eliminar"
+      cancel-label="Cancelar"
+      danger
+      @confirm="confirmDelete"
+      @cancel="pendingDeleteId = null"
+    />
   </div>
 </template>
 
 <script>
 import { DateTime } from 'luxon';
+import ConfirmDialog from '../common/ConfirmDialog.vue';
 
 function relativeTime(ts) {
   const dt = DateTime.fromMillis(ts);
@@ -115,6 +127,7 @@ function relativeTime(ts) {
 
 export default {
   name: 'ChatList',
+  components: { ConfirmDialog },
   props: {
     chats: { type: Array, default: () => [] },
     activeId: { type: String, default: null },
@@ -123,6 +136,7 @@ export default {
   data() {
     return {
       showAll: false,
+      pendingDeleteId: null,
     };
   },
   computed: {
@@ -136,8 +150,12 @@ export default {
       this.showAll = false;
       this.$emit('select', id);
     },
-    deleteAndRefresh(id) {
-      this.$emit('delete', id);
+    requestDelete(id) {
+      this.pendingDeleteId = id;
+    },
+    confirmDelete() {
+      this.$emit('delete', this.pendingDeleteId);
+      this.pendingDeleteId = null;
     },
   },
 };

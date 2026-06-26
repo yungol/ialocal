@@ -17,6 +17,7 @@ const generateRouter = require('./routes/generate');
 const settingsRouter = require('./routes/settings');
 const imagesRouter = require('./routes/images');
 const videoRouter = require('./routes/video');
+const comfyImageRouter = require('./routes/comfy-image');
 const gpu = require('./services/gpu');
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api', generateRouter);
 app.use('/api', settingsRouter);
 app.use('/api', imagesRouter);
 app.use('/api', videoRouter);
+app.use('/api', comfyImageRouter);
 app.use('/images', express.static(path.join(__dirname, '..', 'data', 'images')));
 app.use('/videos', express.static(path.join(__dirname, '..', 'data', 'videos')));
 

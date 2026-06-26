@@ -1,0 +1,101 @@
+{
+  "1": {
+    "inputs": { "ckpt_name": "cyberrealisticPony_v170.safetensors" },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": { "title": "Load Checkpoint" }
+  },
+  "2": {
+    "inputs": {
+      "clip": ["1", 1],
+      "stop_at_clip_layer": -2
+    },
+    "class_type": "CLIPSetLastLayer",
+    "_meta": { "title": "CLIP Set Last Layer" }
+  },
+  "18": {
+    "inputs": {
+      "model": ["1", 0],
+      "clip": ["2", 0],
+      "lora_name": "RealSkin_xxXL_v1.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "Load LoRA - RealSkin" }
+  },
+  "19": {
+    "inputs": {
+      "model": ["18", 0],
+      "clip": ["18", 1],
+      "lora_name": "breastsizeslideroffset.safetensors",
+      "strength_model": 1.7,
+      "strength_clip": 1.7
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "Load LoRA - Breast Slider" }
+  },
+  "20": {
+    "inputs": {
+      "model": ["19", 0],
+      "clip": ["19", 1],
+      "lora_name": "PerfectEyesXL.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "Load LoRA - Perfect Eyes" }
+  },
+  "3": {
+    "inputs": {
+      "clip": ["20", 1],
+      "text": ""
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "Positive Prompt" }
+  },
+  "4": {
+    "inputs": {
+      "clip": ["20", 1],
+      "text": "CyberRealistic_Negative_PONY_V2-neg, blurry, low quality, worst quality, bad anatomy, watermark, ((cleft chin))"
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "Negative Prompt" }
+  },
+  "6": {
+    "inputs": { "width": 768, "height": 1344, "batch_size": 1 },
+    "class_type": "EmptyLatentImage",
+    "_meta": { "title": "Empty Latent Image" }
+  },
+  "5": {
+    "inputs": {
+      "model": ["20", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["6", 0],
+      "seed": 0,
+      "steps": 20,
+      "cfg": 4.5,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1.0
+    },
+    "class_type": "KSampler",
+    "_meta": { "title": "KSampler" }
+  },
+  "7": {
+    "inputs": {
+      "samples": ["5", 0],
+      "vae": ["1", 2]
+    },
+    "class_type": "VAEDecode",
+    "_meta": { "title": "VAE Decode" }
+  },
+  "8": {
+    "inputs": {
+      "images": ["7", 0],
+      "filename_prefix": "ComfyUI"
+    },
+    "class_type": "SaveImage",
+    "_meta": { "title": "Save Image" }
+  }
+}

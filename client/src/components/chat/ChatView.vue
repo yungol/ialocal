@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <MessageList :messages="messages" :streaming="streaming" />
+    <MessageList :messages="messages" :streaming="streaming" :chat-id="chatId" />
     <ChatInput :disabled="streaming" :show-quick-actions="messages.length === 0" :vision="selectedVision" @send="onSend" />
   </div>
 </template>

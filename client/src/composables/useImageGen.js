@@ -89,6 +89,33 @@ async function getImageModels() {
   return (data.models || []).filter((m) => m.type === 'image');
 }
 
+async function generateComfyImage({ model, prompt, negativePrompt, aspect, onStatus } = {}) {
+  const data = await apiFetch('/api/comfy-image', {
+    method: 'POST',
+    body: JSON.stringify({ model, prompt, negativePrompt, aspect }),
+  });
+
+  const { jobId } = data;
+
+  for (;;) {
+    const job = await apiFetch(`/api/comfy-image/job/${jobId}`);
+    if (onStatus) onStatus(job.status);
+    if (job.status === 'done') {
+      const img = job.image;
+      return {
+        id: img.id,
+        url: `/images/${img.id}.png`,
+        prompt: img.prompt,
+        createdAt: img.createdAt,
+      };
+    }
+    if (job.status === 'error') {
+      throw new Error(job.error || 'Error al generar imagen');
+    }
+    await new Promise((r) => setTimeout(r, 2500));
+  }
+}
+
 async function getSavedImages({ limit, offset } = {}) {
   const data = await apiFetch(`/api/images?${new URLSearchParams({ limit: limit ?? 20, offset: offset ?? 0 })}`);
   const images = (data.images || []).map((img) => ({
@@ -110,8 +137,37 @@ async function deleteAllImages() {
   return delAll();
 }
 
+async function upscaleImage({ imageId, onStatus } = {}) {
+  const data = await apiFetch('/api/upscale', {
+    method: 'POST',
+    body: JSON.stringify({ imageId }),
+  });
+
+  const { jobId } = data;
+
+  for (;;) {
+    const job = await apiFetch(`/api/upscale/job/${jobId}`);
+    if (onStatus) onStatus(job.status);
+    if (job.status === 'done') {
+      const img = job.image;
+      return {
+        id: img.id,
+        url: `/images/${img.id}.png`,
+        prompt: img.prompt,
+        createdAt: img.createdAt,
+      };
+    }
+    if (job.status === 'error') {
+      throw new Error(job.error || 'Error al upscalear la imagen');
+    }
+    await new Promise((r) => setTimeout(r, 2500));
+  }
+}
+
 export {
   generateImage,
+  generateComfyImage,
+  upscaleImage,
   enhanceImagePrompt,
   getImageModels,
   getSavedImages,

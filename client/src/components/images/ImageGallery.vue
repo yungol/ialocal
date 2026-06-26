@@ -33,6 +33,7 @@
             v-for="img in col"
             :key="img.id"
             class="rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 relative group cursor-zoom-in transition-all hover:border-neutral-700 hover:ring-1 hover:ring-indigo-500/30"
+            :class="upscalingId === img.id ? 'ring-1 ring-indigo-500/60' : ''"
             @click="openLightbox(img)"
           >
             <img
@@ -42,10 +43,27 @@
               loading="lazy"
             />
 
+            <!-- Upscaling overlay -->
+            <div
+              v-if="upscalingId === img.id"
+              class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 pointer-events-none"
+            >
+              <span class="material-icons text-[28px] text-indigo-400 animate-spin">autorenew</span>
+              <span class="text-[11px] text-neutral-300">Upscalando...</span>
+            </div>
+
             <!-- Hover overlay -->
-            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+            <div v-else class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
 
             <div class="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                class="bg-black/50 backdrop-blur hover:bg-indigo-600 text-neutral-200 rounded-lg p-1.5 transition-colors disabled:opacity-40"
+                title="Upscalar con IA"
+                :disabled="!!upscalingId"
+                @click.stop="$emit('upscale', img)"
+              >
+                <span class="material-icons text-[16px]">high_quality</span>
+              </button>
               <button
                 class="bg-black/50 backdrop-blur hover:bg-black/70 text-neutral-200 rounded-lg p-1.5 transition-colors"
                 title="Descargar"
@@ -108,7 +126,15 @@
               <p class="text-neutral-200 text-[13px] mt-1 leading-relaxed">{{ lightbox.prompt }}</p>
             </div>
             <button
-              class="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-3 py-2 text-[13px] font-medium transition-colors"
+              class="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-white rounded-lg px-3 py-2 text-[13px] font-medium transition-colors"
+              :disabled="!!upscalingId"
+              @click="upscaleFromLightbox"
+            >
+              <span class="material-icons text-[16px]">high_quality</span>
+              Upscalar con IA
+            </button>
+            <button
+              class="w-full flex items-center justify-center gap-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors"
               @click="createVideoFromLightbox"
             >
               <span class="material-icons text-[16px]">movie_filter</span>
@@ -145,8 +171,9 @@ export default {
     generating: { type: Boolean, default: false },
     hasMore: { type: Boolean, default: false },
     loadingMore: { type: Boolean, default: false },
+    upscalingId: { type: String, default: null },
   },
-  emits: ['delete', 'load-more', 'create-video'],
+  emits: ['delete', 'load-more', 'create-video', 'upscale'],
   data() {
     return {
       lightbox: null,
@@ -231,6 +258,11 @@ export default {
       const img = this.lightbox;
       this.closeLightbox();
       this.$emit('create-video', img);
+    },
+    upscaleFromLightbox() {
+      const img = this.lightbox;
+      this.closeLightbox();
+      this.$emit('upscale', img);
     },
     onKeydown(e) {
       if (e.key === 'Escape') this.closeLightbox();

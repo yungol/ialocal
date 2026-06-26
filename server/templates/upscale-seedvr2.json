@@ -1,0 +1,75 @@
+{
+  "16": {
+    "inputs": { "image": "placeholder.png" },
+    "class_type": "LoadImage",
+    "_meta": { "title": "Load Image" }
+  },
+  "21": {
+    "inputs": {
+      "image": ["16", 0],
+      "scale": 2.0,
+      "max_short_edge": 1280
+    },
+    "class_type": "SmartUpscaleResolution",
+    "_meta": { "title": "Smart Upscale Resolution" }
+  },
+  "14": {
+    "inputs": {
+      "model": "seedvr2_ema_3b_fp8_e4m3fn.safetensors",
+      "device": "cuda:0",
+      "blocks_to_swap": 16,
+      "swap_io_components": false,
+      "offload_device": "cpu",
+      "cache_model": false,
+      "attention_mode": "sdpa"
+    },
+    "class_type": "SeedVR2LoadDiTModel",
+    "_meta": { "title": "Load DiT Model" }
+  },
+  "13": {
+    "inputs": {
+      "model": "ema_vae_fp16.safetensors",
+      "device": "cuda:0",
+      "encode_tiled": true,
+      "encode_tile_size": 512,
+      "encode_tile_overlap": 64,
+      "decode_tiled": true,
+      "decode_tile_size": 512,
+      "decode_tile_overlap": 64,
+      "tile_debug": "false",
+      "offload_device": "none",
+      "cache_model": false
+    },
+    "class_type": "SeedVR2LoadVAEModel",
+    "_meta": { "title": "Load VAE Model" }
+  },
+  "10": {
+    "inputs": {
+      "image": ["16", 0],
+      "dit": ["14", 0],
+      "vae": ["13", 0],
+      "seed": 42,
+      "resolution": ["21", 0],
+      "max_resolution": 0,
+      "batch_size": 1,
+      "uniform_batch_size": false,
+      "color_correction": "lab",
+      "temporal_overlap": 0,
+      "prepend_frames": 0,
+      "input_noise_scale": 0,
+      "latent_noise_scale": 0,
+      "offload_device": "cpu",
+      "enable_debug": false
+    },
+    "class_type": "SeedVR2VideoUpscaler",
+    "_meta": { "title": "SeedVR2 Upscaler" }
+  },
+  "15": {
+    "inputs": {
+      "images": ["10", 0],
+      "filename_prefix": "ComfyUI"
+    },
+    "class_type": "SaveImage",
+    "_meta": { "title": "Save Image" }
+  }
+}
