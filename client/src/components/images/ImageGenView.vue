@@ -47,6 +47,17 @@
           />
         </label>
 
+        <ImageInputPanel
+          v-if="selectedEditCaps"
+          :capabilities="selectedEditCaps"
+          v-model:mode="editMode"
+          v-model:init-image="initImage"
+          v-model:ref-images="refImages"
+          v-model:mask-image="maskImage"
+          v-model:strength="strength"
+          @edit-mask="maskEditorOpen = true"
+        />
+
         <template v-if="isComfyModel">
           <div class="flex flex-col gap-1.5">
             <span class="text-neutral-500 text-[11px] uppercase tracking-wide">Formato</span>
@@ -88,20 +99,29 @@
       <div class="px-4 py-3.5 border-t border-neutral-800/70 space-y-2">
         <button
           class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white rounded-lg px-4 py-2.5 text-[13px] font-medium transition-colors"
-          :disabled="generating || !prompt.trim() || !model"
+          :disabled="!canGenerate"
           @click="generate"
         >
           <span v-if="generating" class="material-icons text-[18px] animate-spin">autorenew</span>
           <span v-else class="material-icons text-[18px]">auto_awesome</span>
           {{ generating ? 'Generando...' : 'Generar Imagen' }}
         </button>
-        <p
-          v-if="statusMsg"
-          class="text-xs text-center"
-          :class="statusError ? 'text-red-400' : 'text-amber-500/80'"
-        >
-          {{ statusMsg }}
-        </p>
+        <div v-if="statusMsg" class="flex items-center justify-center gap-2">
+          <p
+            class="text-xs text-center"
+            :class="statusError ? 'text-red-400' : 'text-amber-500/80'"
+          >
+            {{ statusMsg }}
+          </p>
+          <button
+            v-if="activeEditJob"
+            type="button"
+            class="text-[11px] text-neutral-500 hover:text-red-400 underline transition-colors"
+            @click="cancelEdit"
+          >
+            Cancelar
+          </button>
+        </div>
         <p v-else class="text-[11px] text-center text-neutral-600">Ctrl/Cmd + Enter para generar</p>
       </div>
     </aside>
@@ -185,6 +205,14 @@
       @created="onVideoCreated"
     />
 
+    <MaskEditorModal
+      :open="maskEditorOpen"
+      :base-image="initImage"
+      :initial-mask="maskImage"
+      @close="maskEditorOpen = false"
+      @apply="onMaskApplied"
+    />
+
     <ConfirmDialog
       :open="confirmDeleteAllOpen"
       title="Eliminar todas las imágenes"
@@ -201,6 +229,8 @@
 <script>
 import ImageModelSelector from './ImageModelSelector.vue';
 import ImageParams from './ImageParams.vue';
+import ImageInputPanel from './ImageInputPanel.vue';
+import MaskEditorModal from './MaskEditorModal.vue';
 import ImageGallery from './ImageGallery.vue';
 import VideoGallery from './VideoGallery.vue';
 import VideoGenModal from './VideoGenModal.vue';
@@ -213,6 +243,9 @@ import {
   getSavedImages,
   deleteImage,
   deleteAllImages,
+  getImageModels,
+  editImage,
+  cancelEditJob,
 } from '../../composables/useImageGen';
 import { getSavedVideos, deleteVideo } from '../../composables/useVideoGen';
 
@@ -243,6 +276,8 @@ export default {
   components: {
     ImageModelSelector,
     ImageParams,
+    ImageInputPanel,
+    MaskEditorModal,
     ImageGallery,
     VideoGallery,
     VideoGenModal,
@@ -276,6 +311,15 @@ export default {
       totalImages: 0,
       loadingMore: false,
       upscalingId: null,
+      availableModels: [],
+      editMode: 'none',
+      initImage: null,
+      refImages: [],
+      maskImage: null,
+      strength: 0.75,
+      activeEditJob: null,
+      editCancelled: false,
+      maskEditorOpen: false,
     };
   },
   computed: {
@@ -288,6 +332,32 @@ export default {
     isComfyModel() {
       return COMFY_MODELS.has(this.model);
     },
+    selectedEditCaps() {
+      return this.availableModels.find((m) => m.id === this.model)?.edit || null;
+    },
+    // Missing-input guard for the active edit mode, used both to disable the
+    // Generate button and to short-circuit generate() before any request.
+    editModeBlockedReason() {
+      if (!this.selectedEditCaps || this.editMode === 'none') return null;
+      if (this.editMode === 'img2img' && !this.initImage) {
+        return 'Agrega una imagen para usar Remix';
+      }
+      if (this.editMode === 'refs' && this.refImages.length === 0) {
+        return 'Agrega al menos una imagen de referencia';
+      }
+      if (this.editMode === 'inpaint' && (!this.initImage || !this.maskImage)) {
+        return 'Agrega una imagen base y pinta la mascara para usar Retocar';
+      }
+      return null;
+    },
+    canGenerate() {
+      return (
+        !this.generating &&
+        !!this.prompt.trim() &&
+        !!this.model &&
+        !this.editModeBlockedReason
+      );
+    },
   },
   watch: {
     model(val) {
@@ -297,6 +367,30 @@ export default {
       this.width = defs.width;
       this.height = defs.height;
     },
+    selectedEditCaps(val) {
+      if (!val) {
+        this.editMode = 'none';
+        this.initImage = null;
+        this.refImages = [];
+        this.maskImage = null;
+        this.statusMsg = 'El modo edicion no esta disponible con este modelo.';
+        this.statusError = false;
+        return;
+      }
+      // Clamp state to the new model's capabilities: models may differ in
+      // supported modes and reference-image limits.
+      const modeSupported = {
+        none: true,
+        img2img: !!val.img2img,
+        refs: (val.refImages || 0) > 0,
+        inpaint: !!val.inpaint,
+      };
+      if (!modeSupported[this.editMode]) this.editMode = 'none';
+      if (this.refImages.length > (val.refImages || 0)) {
+        this.refImages = this.refImages.slice(0, val.refImages || 0);
+      }
+      if (!val.inpaint) this.maskImage = null;
+    },
   },
   async mounted() {
     try {
@@ -305,6 +399,11 @@ export default {
       this.totalImages = result.total;
     } catch {
       // ignore
+    }
+    try {
+      this.availableModels = await getImageModels();
+    } catch {
+      // ignore — edit-mode UI simply won't appear
     }
   },
   methods: {
@@ -369,6 +468,16 @@ export default {
     },
     async generate() {
       if (this.generating || !this.prompt.trim() || !this.model) return;
+
+      // Pre-flight guard: don't even flip `generating` on if the active edit
+      // mode is missing required input images.
+      if (this.editModeBlockedReason) {
+        this.statusMsg = this.editModeBlockedReason;
+        this.statusError = true;
+        return;
+      }
+
+      this.editCancelled = false;
       this.generating = true;
       this.statusMsg = 'cargando modelo...';
       this.statusError = false;
@@ -385,6 +494,31 @@ export default {
             },
           });
           this.images.unshift(img);
+        } else if (this.editMode !== 'none' && this.selectedEditCaps) {
+          const results = await editImage({
+            model: this.model,
+            mode: this.editMode,
+            prompt: this.prompt,
+            negativePrompt: this.negativePrompt,
+            steps: this.steps,
+            guidance: this.guidance,
+            seed: this.seed,
+            width: this.width,
+            height: this.height,
+            strength: this.strength,
+            initImage: this.initImage,
+            refImages: this.refImages,
+            maskImage: this.maskImage,
+            onJobStart: (jobId) => {
+              this.activeEditJob = { model: this.model, jobId };
+            },
+            onStatus: (s) => {
+              this.statusMsg =
+                s === 'queued' ? 'En cola...' : s === 'generating' ? 'Generando...' : this.statusMsg;
+            },
+            shouldCancel: () => this.editCancelled,
+          });
+          results.forEach((img) => this.images.unshift(img));
         } else {
           const results = await generateImage({
             model: this.model,
@@ -405,7 +539,17 @@ export default {
         this.statusError = true;
       } finally {
         this.generating = false;
+        this.activeEditJob = null;
       }
+    },
+    onMaskApplied({ maskImage }) {
+      this.maskImage = maskImage;
+      this.maskEditorOpen = false;
+    },
+    async cancelEdit() {
+      if (!this.activeEditJob) return;
+      this.editCancelled = true;
+      await cancelEditJob(this.activeEditJob.model, this.activeEditJob.jobId);
     },
     async onUpscale(img) {
       if (this.upscalingId) return;

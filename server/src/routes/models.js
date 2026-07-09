@@ -6,6 +6,9 @@ const router = express.Router();
 
 function detectType(modelId) {
   const id = modelId.toLowerCase();
+  if (id.includes('whisper')) {
+    return 'stt';
+  }
   if (
     id.includes('sd') ||
     id.includes('flux') ||
@@ -41,6 +44,14 @@ const MODEL_PATHS = {
   'flux2-klein': '/home/juan/models/flux-2-klein-4b-Q4_0.gguf',
   'juggernaut-z': '/home/juan/models/juggernautZ-v10-Q6_K.gguf',
   'gemma4-vision': '/home/juan/models/gemma-4-E4B-it-Q4_K_M.gguf',
+  whisper: '/home/juan/models/ggml-large-v3-turbo.bin',
+};
+
+// Image-editing capabilities exposed via sd-server's native async img_gen API
+// (img2img, reference-image conditioning, inpainting). Only models listed here
+// show edit-mode UI on the client; everything else stays txt2img-only.
+const EDIT_CAPABILITIES = {
+  'flux2-klein': { img2img: true, inpaint: true, refImages: 3 },
 };
 
 // ComfyUI-based models are not managed by llama-swap; they are injected here.
@@ -56,6 +67,7 @@ router.get('/models', async (_req, res) => {
       vision: detectVision(m.id),
       status: 'unloaded',
       size: getDiskSize(MODEL_PATHS[m.id]),
+      edit: EDIT_CAPABILITIES[m.id] || null,
     }));
     res.json({ models: [...models, ...COMFY_MODELS] });
   } catch {
@@ -66,6 +78,7 @@ router.get('/models', async (_req, res) => {
       vision: detectVision(id),
       status: 'unloaded',
       size: getDiskSize(modelPath),
+      edit: EDIT_CAPABILITIES[id] || null,
     }));
     res.json({ models: [...fallback, ...COMFY_MODELS] });
   }
@@ -91,3 +104,4 @@ router.post('/models/unload-all', async (_req, res) => {
 });
 
 module.exports = router;
+module.exports.EDIT_CAPABILITIES = EDIT_CAPABILITIES;

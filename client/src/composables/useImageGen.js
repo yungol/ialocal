@@ -164,6 +164,108 @@ async function upscaleImage({ imageId, onStatus } = {}) {
   }
 }
 
+const EDIT_JOB_TIMEOUT_MS = 10 * 60 * 1000;
+const EDIT_POLL_INTERVAL_MS = 2000;
+
+// Starts an img2img / reference-image / inpainting job against sd-server's
+// native async API (via the /api/images/edit proxy) and polls it to completion.
+// Mirrors generateImage's persistence step: every returned image is saved via
+// POST /api/images so it shows up in the gallery like any other generation.
+async function editImage({
+  model,
+  mode,
+  prompt,
+  negativePrompt,
+  steps,
+  guidance,
+  seed,
+  width,
+  height,
+  strength,
+  initImage,
+  refImages,
+  maskImage,
+  onStatus,
+  onJobStart,
+  shouldCancel,
+}) {
+  const data = await apiFetch('/api/images/edit', {
+    method: 'POST',
+    body: JSON.stringify({
+      model,
+      mode,
+      prompt,
+      negativePrompt,
+      steps,
+      guidance,
+      seed,
+      width,
+      height,
+      strength,
+      initImage,
+      refImages,
+      maskImage,
+    }),
+  });
+
+  const jobId = data.jobId;
+  const resolvedSeed = data.seed;
+  if (onJobStart) onJobStart(jobId);
+  const startedAt = Date.now();
+
+  for (;;) {
+    if (shouldCancel && shouldCancel()) {
+      throw new Error('Edicion cancelada');
+    }
+    if (Date.now() - startedAt > EDIT_JOB_TIMEOUT_MS) {
+      throw new Error('Edit job timed out');
+    }
+
+    const job = await apiFetch(`/api/images/edit/jobs/${model}/${jobId}`);
+    if (onStatus) onStatus(job.status);
+
+    if (job.status === 'completed') {
+      const imageData = job.result?.images || [];
+      const results = [];
+      for (const img of imageData) {
+        if (!img.b64_json) continue;
+        const saved = await apiFetch('/api/images', {
+          method: 'POST',
+          body: JSON.stringify({ b64_json: img.b64_json, prompt, model }),
+        });
+        results.push({
+          id: saved.id,
+          url: `/images/${saved.id}.png`,
+          prompt,
+          seed: resolvedSeed,
+          createdAt: saved.createdAt,
+        });
+      }
+      return results;
+    }
+
+    if (job.status === 'failed') {
+      throw new Error('Error al editar la imagen');
+    }
+    if (job.status === 'cancelled') {
+      throw new Error('Edicion cancelada');
+    }
+
+    await new Promise((r) => setTimeout(r, EDIT_POLL_INTERVAL_MS));
+  }
+}
+
+// Best-effort cancel: safe to call from a "Cancelar" button without try/catch.
+async function cancelEditJob(model, jobId) {
+  try {
+    return await apiFetch(`/api/images/edit/jobs/${model}/${jobId}/cancel`, {
+      method: 'POST',
+    });
+  } catch {
+    return null;
+  }
+}
+
 export {
   generateImage,
   generateComfyImage,
@@ -173,4 +275,6 @@ export {
   getSavedImages,
   deleteImage,
   deleteAllImages,
+  editImage,
+  cancelEditJob,
 };

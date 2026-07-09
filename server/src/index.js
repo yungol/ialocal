@@ -18,6 +18,8 @@ const settingsRouter = require('./routes/settings');
 const imagesRouter = require('./routes/images');
 const videoRouter = require('./routes/video');
 const comfyImageRouter = require('./routes/comfy-image');
+const imageEditRouter = require('./routes/image-edit');
+const transcribeRouter = require('./routes/transcribe');
 const gpu = require('./services/gpu');
 
 const app = express();
@@ -28,7 +30,7 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 app.use('/api', modelsRouter);
 app.use('/api', statsRouter);
@@ -38,8 +40,14 @@ app.use('/api', settingsRouter);
 app.use('/api', imagesRouter);
 app.use('/api', videoRouter);
 app.use('/api', comfyImageRouter);
+app.use('/api', imageEditRouter);
 app.use('/images', express.static(path.join(__dirname, '..', 'data', 'images')));
 app.use('/videos', express.static(path.join(__dirname, '..', 'data', 'videos')));
+
+// OpenAI-compatible audio transcription. Mounted before the generic /v1 proxy
+// because it streams multipart/form-data, which the JSON-only proxy cannot
+// forward. Other /v1 paths fall through to the proxy below.
+app.use('/v1', transcribeRouter);
 
 // Any llama-swap traffic (chat + image generation) needs the GPU in llama
 // mode. requireLlama stops ComfyUI first; it is a no-op when ComfyUI is down.
