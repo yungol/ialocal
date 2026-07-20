@@ -147,11 +147,12 @@ async function waitForOutputs(promptId, { timeoutMs = 1200000, onTick } = {}) {
   throw new Error('Timeout esperando el render del video en ComfyUI');
 }
 
-// Find the first produced file in a node-outputs map (videos/gifs/images).
+// Find the first produced file in a node-outputs map. SaveAudio* nodes report
+// under "audio", which is why it is listed alongside the visual outputs.
 function findOutputFile(outputs) {
   for (const nodeId of Object.keys(outputs)) {
     const out = outputs[nodeId];
-    for (const key of ['videos', 'gifs', 'images']) {
+    for (const key of ['videos', 'gifs', 'images', 'audio']) {
       if (Array.isArray(out[key]) && out[key].length > 0) {
         return out[key][0];
       }

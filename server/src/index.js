@@ -19,7 +19,9 @@ const imagesRouter = require('./routes/images');
 const videoRouter = require('./routes/video');
 const comfyImageRouter = require('./routes/comfy-image');
 const imageEditRouter = require('./routes/image-edit');
+const sfxRouter = require('./routes/sfx');
 const transcribeRouter = require('./routes/transcribe');
+const speechRouter = require('./routes/speech');
 const gpu = require('./services/gpu');
 
 const app = express();
@@ -41,13 +43,19 @@ app.use('/api', imagesRouter);
 app.use('/api', videoRouter);
 app.use('/api', comfyImageRouter);
 app.use('/api', imageEditRouter);
+app.use('/api', sfxRouter);
 app.use('/images', express.static(path.join(__dirname, '..', 'data', 'images')));
 app.use('/videos', express.static(path.join(__dirname, '..', 'data', 'videos')));
+app.use('/sfx', express.static(path.join(__dirname, '..', 'data', 'sfx')));
 
 // OpenAI-compatible audio transcription. Mounted before the generic /v1 proxy
 // because it streams multipart/form-data, which the JSON-only proxy cannot
 // forward. Other /v1 paths fall through to the proxy below.
 app.use('/v1', transcribeRouter);
+
+// OpenAI-compatible text-to-speech. Mounted before the GPU middleware below so
+// narration requests never stop ComfyUI: Kokoro runs on CPU.
+app.use('/v1', speechRouter);
 
 // Any llama-swap traffic (chat + image generation) needs the GPU in llama
 // mode. requireLlama stops ComfyUI first; it is a no-op when ComfyUI is down.

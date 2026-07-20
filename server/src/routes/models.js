@@ -9,6 +9,9 @@ function detectType(modelId) {
   if (id.includes('whisper')) {
     return 'stt';
   }
+  if (id.includes('kokoro')) {
+    return 'tts';
+  }
   if (
     id.includes('sd') ||
     id.includes('flux') ||
