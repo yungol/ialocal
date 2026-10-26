@@ -22,7 +22,7 @@ Content-Type: application/json
 
 | Field | Required | Type | Description |
 |---|:---:|---|---|
-| `model` | yes | string | `juggernaut-z`, `flux2-klein`, `sdxl` |
+| `model` | yes | string | `juggernaut-z`, `flux2-klein`, `sdxl`; `flux3-klein` pending runtime activation below |
 | `prompt` | yes | string | The prompt, optionally with an `<sd_cpp_extra_args>` tag |
 | `size` | no | string | `"WxH"`, e.g. `"576x1024"`. Defaults to the model's own default |
 | `n` | no | integer | Number of images. Defaults to `1` |
@@ -60,9 +60,27 @@ value that produced the image is known and the run can be reproduced.
 | `juggernaut-z` | 20 | 1 | 576x1024 | honored |
 | `flux2-klein` | 4 | 1.0 | 576x1024 | ignored by the architecture |
 | `sdxl` | 20 | 7.5 | 576x1024 | honored |
+| `flux3-klein` (distilled; pending activation) | 16 | 1 | 576x1024 | runtime behavior not yet verified |
 
-`GET /api/models` on the Express server lists every installed model with a
-`type` field; image models are `type: "image"`.
+These are web UI selection defaults, not proof of engine readiness. Unknown
+models retain the UI fallback of 20 steps, CFG 7.5, and 576x1024; selecting a
+model does not reset the seed (initially -1). Euler for FLUX3 will be configured
+in the backend during isolated provisioning, not sent as a new frontend option.
+
+`GET /api/models` on the Express server lists upstream models with a `type`
+field; image models are `type: "image"`. The selector consumes this backend
+catalog without a separate frontend model list. When llama-swap is unavailable,
+the backend falls back to its local catalog, which now appends `flux3-klein`
+without changing existing entries or their ordering. Its size is read from
+`/home/juan/models/flux3-klein/flux3-image-klein-Q4_0.gguf`, or `null` if absent.
+
+**FLUX3 is catalog/defaults-only until provisioning and activation are complete.**
+A fallback row does not establish that weights, the isolated CUDA backend, or
+the active llama-swap stanza exist. FLUX3 has `edit: null` and is txt2img-only;
+existing FLUX2 edit capabilities remain unchanged. F3-2 preparation and F3-3
+generation/unload verification are tracked in
+[`add-flux3-klein`](../odd/tasks/add-flux3-klein.md); shared-service reload and
+inference require separate explicit consent. No FLUX3 runtime result is claimed.
 
 ## Response `200`
 

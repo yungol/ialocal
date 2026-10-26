@@ -50,6 +50,7 @@ const MODEL_PATHS = {
   'juggernaut-z': '/home/juan/models/juggernautZ-v10-Q6_K.gguf',
   'gemma4-vision': '/home/juan/models/gemma-4-E4B-it-Q4_K_M.gguf',
   whisper: '/home/juan/models/ggml-large-v3-turbo.bin',
+  'flux3-klein': '/home/juan/models/flux3-klein/flux3-image-klein-Q4_0.gguf',
 };
 
 // Image-editing capabilities exposed via sd-server's native async img_gen API

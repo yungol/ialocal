@@ -248,14 +248,7 @@ import {
   cancelEditJob,
 } from '../../composables/useImageGen';
 import { getSavedVideos, deleteVideo } from '../../composables/useVideoGen';
-
-const MODEL_DEFAULTS = {
-  'flux2-klein': { steps: 4, guidance: 1.0, width: 576, height: 1024 },
-  'juggernaut-z': { steps: 20, guidance: 1, width: 576, height: 1024 },
-  sdxl: { steps: 20, guidance: 7.5, width: 576, height: 1024 },
-};
-
-const GLOBAL_DEFAULTS = { steps: 20, guidance: 7.5, seed: -1, width: 576, height: 1024 };
+import { GLOBAL_DEFAULTS, getImageModelDefaults } from './imageModelDefaults.js';
 
 const COMFY_MODELS = new Set();
 
@@ -352,16 +345,13 @@ export default {
     },
     canGenerate() {
       return (
-        !this.generating &&
-        !!this.prompt.trim() &&
-        !!this.model &&
-        !this.editModeBlockedReason
+        !this.generating && !!this.prompt.trim() && !!this.model && !this.editModeBlockedReason
       );
     },
   },
   watch: {
     model(val) {
-      const defs = MODEL_DEFAULTS[val] || GLOBAL_DEFAULTS;
+      const defs = getImageModelDefaults(val);
       this.steps = defs.steps;
       this.guidance = defs.guidance;
       this.width = defs.width;
@@ -514,7 +504,11 @@ export default {
             },
             onStatus: (s) => {
               this.statusMsg =
-                s === 'queued' ? 'En cola...' : s === 'generating' ? 'Generando...' : this.statusMsg;
+                s === 'queued'
+                  ? 'En cola...'
+                  : s === 'generating'
+                    ? 'Generando...'
+                    : this.statusMsg;
             },
             shouldCancel: () => this.editCancelled,
           });
