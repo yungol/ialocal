@@ -12,27 +12,40 @@ const VISION_MODEL = 'gemma4-vision';
 const VIDEOS_DIR = path.join(__dirname, '..', '..', 'data', 'videos');
 const IMAGES_DIR = path.join(__dirname, '..', '..', 'data', 'images');
 const INDEX_PATH = path.join(VIDEOS_DIR, 'index.json');
-const TEMPLATE_PATH = path.join(
-  __dirname,
-  '..',
-  '..',
-  'templates',
-  'video-wan22.json',
-);
+const TEMPLATES_DIR = path.join(__dirname, '..', '..', 'templates');
 
 fs.mkdirSync(VIDEOS_DIR, { recursive: true });
+
+// Wan 2.2 presets. `model` on POST /video is optional; anything not listed here
+// (including absent or unknown ids) falls back to the default unchanged. Both
+// presets share the 14B I2V graph and differ only by template (LoRA set).
+const VIDEO_MODELS = [
+  { id: 'wan22', template: 'video-wan22.json' },
+  { id: 'wan22-hq', template: 'video-wan22-hq.json' },
+];
+const DEFAULT_VIDEO_MODEL = 'wan22';
+const ASPECTS = ['square', 'horizontal', 'vertical'];
 
 // Output dimensions per aspect. Wan needs multiples of 16; the workflow's
 // ResizeImageMaskNode pre-scales the input, these set the latent size.
 const DIMENSIONS = {
   // square at 640 has double the pixels of the other presets and OOMs on 8GB,
   // so it is capped lower. All values stay multiples of 16 (Wan requirement).
-  square: { width: 528, height: 528 },
-  horizontal: { width: 640, height: 320 },
-  vertical: { width: 320, height: 640 },
+  wan22: {
+    square: { width: 528, height: 528 },
+    horizontal: { width: 640, height: 320 },
+    vertical: { width: 320, height: 640 },
+  },
+  // HQ shares the 14B graph, so it keeps the exact same sizes.
+  'wan22-hq': {
+    square: { width: 528, height: 528 },
+    horizontal: { width: 640, height: 320 },
+    vertical: { width: 320, height: 640 },
+  },
 };
 
-// Node ids in templates/video-wan22.json (exported API format).
+// Node ids in templates/video-wan22.json (exported API format). The HQ template
+// is the same graph with different LoRA names, so it uses the same ids.
 const NODE = {
   loadImage: '97',
   positivePrompt: '129:93',
@@ -71,8 +84,17 @@ function decodeImage(input) {
   return Buffer.from(base64, 'base64');
 }
 
-function buildWorkflow({ prompt, dims, imageRef }) {
-  const wf = JSON.parse(fs.readFileSync(TEMPLATE_PATH, 'utf-8'));
+function resolveVideoModelId(model) {
+  return VIDEO_MODELS.some((preset) => preset.id === model) ? model : DEFAULT_VIDEO_MODEL;
+}
+
+function getDimensions(model, aspect) {
+  const preset = DIMENSIONS[resolveVideoModelId(model)] || DIMENSIONS[DEFAULT_VIDEO_MODEL];
+  return ASPECTS.includes(aspect) ? preset[aspect] : preset.square;
+}
+
+function buildWan14BWorkflow({ template, prompt, dims, imageRef }) {
+  const wf = JSON.parse(fs.readFileSync(path.join(TEMPLATES_DIR, template), 'utf-8'));
   wf[NODE.loadImage].inputs.image = imageRef;
   wf[NODE.positivePrompt].inputs.text = prompt;
   wf[NODE.wanI2V].inputs.width = dims.width;
@@ -81,8 +103,18 @@ function buildWorkflow({ prompt, dims, imageRef }) {
   return wf;
 }
 
+function buildWorkflow({ model, prompt, dims, imageRef }) {
+  const preset = VIDEO_MODELS.find((entry) => entry.id === resolveVideoModelId(model));
+  return buildWan14BWorkflow({
+    template: preset.template,
+    prompt,
+    dims,
+    imageRef,
+  });
+}
+
 // Runs the full pipeline for a job. Never throws; records errors on the job.
-async function runJob(job, { prompt, dims, imageBuffer }) {
+async function runJob(job, { prompt, dims, model, imageBuffer }) {
   try {
     job.status = 'preparing';
     await gpu.requireComfy();
@@ -90,7 +122,7 @@ async function runJob(job, { prompt, dims, imageBuffer }) {
     const filename = `${job.id}.png`;
     const imageRef = await comfyui.uploadImage(imageBuffer, filename);
 
-    const workflow = buildWorkflow({ prompt, dims, imageRef });
+    const workflow = buildWorkflow({ model, prompt, dims, imageRef });
 
     job.status = 'rendering';
     const promptId = await comfyui.queuePrompt(workflow);
@@ -128,13 +160,14 @@ async function runJob(job, { prompt, dims, imageBuffer }) {
 
 // Start a video generation job. Returns immediately with a job id to poll.
 router.post('/video', (req, res) => {
-  const { prompt, image, imageId, aspect } = req.body;
+  const { prompt, image, imageId, aspect, model } = req.body;
 
   if (!prompt || !prompt.trim()) {
     return res.status(400).json({ error: 'Falta el prompt' });
   }
 
-  const dims = DIMENSIONS[aspect] || DIMENSIONS.square;
+  const videoModel = resolveVideoModelId(model);
+  const dims = getDimensions(videoModel, aspect);
 
   // Source image: either a previously generated image (by id) or an upload.
   let imageBuffer;
@@ -158,7 +191,8 @@ router.post('/video', (req, res) => {
     id: generateId(),
     status: 'queued',
     prompt: prompt.trim(),
-    aspect: aspect && DIMENSIONS[aspect] ? aspect : 'square',
+    aspect: aspect && ASPECTS.includes(aspect) ? aspect : 'square',
+    model: videoModel,
     createdAt: Date.now(),
     video: null,
     error: null,
@@ -166,7 +200,7 @@ router.post('/video', (req, res) => {
   jobs.set(job.id, job);
 
   // Fire and forget; the client polls GET /video/job/:id.
-  runJob(job, { prompt: job.prompt, dims, imageBuffer });
+  runJob(job, { prompt: job.prompt, dims, model: job.model, imageBuffer });
 
   res.json({ jobId: job.id, status: job.status });
 });
@@ -181,6 +215,7 @@ router.get('/video/job/:id', (req, res) => {
     status: job.status,
     prompt: job.prompt,
     aspect: job.aspect,
+    model: job.model,
     error: job.error,
     video: job.video,
   });
@@ -311,3 +346,11 @@ router.post('/video/prompt', async (req, res) => {
 });
 
 module.exports = router;
+
+// Exported for tests: pure routing helpers with no Express or ComfyUI side
+// effects. The router itself stays the module's public contract.
+module.exports.VIDEO_MODELS = VIDEO_MODELS;
+module.exports.DEFAULT_VIDEO_MODEL = DEFAULT_VIDEO_MODEL;
+module.exports.resolveVideoModelId = resolveVideoModelId;
+module.exports.getDimensions = getDimensions;
+module.exports.buildWorkflow = buildWorkflow;

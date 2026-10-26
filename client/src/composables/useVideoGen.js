@@ -1,11 +1,12 @@
 import { apiFetch } from './useApi';
 
 // Start a video generation job. `source` is either { imageId } for an already
-// generated image or { image } with a base64/data-URL upload.
-async function createVideo({ prompt, aspect, imageId, image }) {
+// generated image or { image } with a base64/data-URL upload. `model` is a Wan
+// 2.2 preset id; omit it (or send an unknown one) to use the server default.
+async function createVideo({ prompt, aspect, model, imageId, image }) {
   const data = await apiFetch('/api/video', {
     method: 'POST',
-    body: JSON.stringify({ prompt, aspect, imageId, image }),
+    body: JSON.stringify({ prompt, aspect, model, imageId, image }),
   });
   return data.jobId;
 }

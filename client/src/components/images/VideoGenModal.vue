@@ -111,6 +111,25 @@
             </label>
 
             <div class="flex flex-col gap-1.5">
+              <span class="text-neutral-500 text-[11px] uppercase tracking-wide">Modelo</span>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  v-for="opt in modelOptions"
+                  :key="opt.id"
+                  class="flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 text-[12px] transition-colors"
+                  :class="model === opt.id
+                    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-300'
+                    : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-700'"
+                  :disabled="generating"
+                  @click="model = opt.id"
+                >
+                  <span class="material-icons text-[18px]">{{ opt.icon }}</span>
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
               <span class="text-neutral-500 text-[11px] uppercase tracking-wide">Formato</span>
               <div class="grid grid-cols-3 gap-2">
                 <button
@@ -155,6 +174,7 @@
 
 <script>
 import { createVideo, pollVideoJob, generateVideoPrompt } from '../../composables/useVideoGen';
+import { VIDEO_MODELS, DEFAULT_VIDEO_MODEL } from './videoModelDefaults';
 
 const STATUS_LABELS = {
   queued: 'En cola...',
@@ -174,12 +194,14 @@ export default {
     return {
       prompt: '',
       aspect: 'square',
+      model: DEFAULT_VIDEO_MODEL,
       uploadedDataUrl: '',
       generating: false,
       suggesting: false,
       status: '',
       error: '',
       resultVideo: null,
+      modelOptions: VIDEO_MODELS,
       aspectOptions: [
         { value: 'horizontal', label: 'Horizontal', icon: 'crop_landscape' },
         { value: 'square', label: 'Cuadrado', icon: 'crop_square' },
@@ -208,6 +230,7 @@ export default {
     reset() {
       this.prompt = '';
       this.aspect = 'square';
+      this.model = DEFAULT_VIDEO_MODEL;
       this.uploadedDataUrl = '';
       this.generating = false;
       this.suggesting = false;
@@ -294,6 +317,7 @@ export default {
         const jobId = await createVideo({
           prompt: this.prompt.trim(),
           aspect: this.aspect,
+          model: this.model,
           ...source,
         });
 
