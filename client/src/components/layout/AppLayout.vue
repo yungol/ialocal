@@ -9,6 +9,7 @@
       <ChatLayout v-if="activeView === 'chat'" />
       <ImageGenView v-else-if="activeView === 'images'" />
       <ManagementView v-else-if="activeView === 'management'" />
+      <ExplanationView v-else-if="activeView === 'explanation'" />
     </main>
   </div>
 </template>
@@ -18,10 +19,11 @@ import IconRail from './IconRail.vue';
 import ChatLayout from '../chat/ChatLayout.vue';
 import ImageGenView from '../images/ImageGenView.vue';
 import ManagementView from '../management/ManagementView.vue';
+import ExplanationView from '../explanation/ExplanationView.vue';
 
 export default {
   name: 'AppLayout',
-  components: { IconRail, ChatLayout, ImageGenView, ManagementView },
+  components: { IconRail, ChatLayout, ImageGenView, ManagementView, ExplanationView },
   data() {
     return {
       activeView: 'chat',

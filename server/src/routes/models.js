@@ -44,6 +44,7 @@ const MODEL_PATHS = {
   'qwen3-8b': '/home/juan/models/Qwen3-8B-Q4_K_M.gguf',
   'qwen-claude-opus': '/home/juan/models/Qwen3.5-9B-Claude-Opus-Q4_K_M.gguf',
   bonsai: '/home/juan/models/Ternary-Bonsai-2-27B-PTQ1_0.gguf',
+  'qwen36-35b-a3b-vision': '/home/juan/models/Qwen3.6-35B-A3B-MTP-MXFP4_MOE.gguf',
   'gemma-4-e4b': '/home/juan/models/gemma-4-E4B-it-Q4_K_M.gguf',
   'flux2-klein': '/home/juan/models/flux-2-klein-4b-Q4_0.gguf',
   'juggernaut-z': '/home/juan/models/juggernautZ-v10-Q6_K.gguf',

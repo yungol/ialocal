@@ -54,6 +54,7 @@ export default {
         { id: 'chat', label: 'Chat', icon: 'forum' },
         { id: 'images', label: 'Imagenes', icon: 'image' },
         { id: 'management', label: 'Gestion', icon: 'dns' },
+        { id: 'explanation', label: 'Explicacion', icon: 'school' },
       ],
     };
   },

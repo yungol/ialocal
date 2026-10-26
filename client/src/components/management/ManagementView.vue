@@ -22,6 +22,8 @@
       VRAM no disponible
     </div>
 
+    <ActivityPanel :activity="activity" class="mb-5" />
+
     <div class="space-y-2.5">
       <ModelCard
         v-for="m in models"
@@ -40,17 +42,19 @@
 </template>
 
 <script>
+import ActivityPanel from './ActivityPanel.vue';
 import ModelCard from './ModelCard.vue';
 import VramBar from './VramBar.vue';
 import { store } from '../../composables/useModels';
 
 export default {
   name: 'ManagementView',
-  components: { ModelCard, VramBar },
+  components: { ActivityPanel, ModelCard, VramBar },
   data() {
     return {
       models: [],
       vram: null,
+      activity: [],
       actionLoading: false,
       unsubscribe: null,
     };
@@ -58,6 +62,7 @@ export default {
   mounted() {
     this.unsubscribe = store.subscribe((state) => {
       this.models = state.models;
+      this.activity = state.activity || [];
       if (state.stats && state.stats.vram) {
         const v = state.stats.vram;
         this.vram = {

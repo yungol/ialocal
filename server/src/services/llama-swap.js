@@ -22,6 +22,15 @@ function getRunning() {
   return request('/running').then((res) => res.json());
 }
 
+// Live per-slot state from a model's own llama-server, reached through
+// llama-swap's /upstream passthrough. Only ever call this for a model that
+// /running already reports as ready: hitting /upstream for an unloaded model
+// makes llama-swap load it, which on a single 8GB card would evict whatever
+// else is resident.
+function getSlots(name) {
+  return request(`/upstream/${name}/slots`).then((res) => res.json());
+}
+
 function unloadModel(name) {
   return request(`/api/models/unload/${name}`, { method: 'POST' }).then((res) =>
     res.json(),
@@ -34,4 +43,4 @@ function unloadAll() {
   );
 }
 
-module.exports = { getModels, getRunning, unloadModel, unloadAll };
+module.exports = { getModels, getRunning, getSlots, unloadModel, unloadAll };

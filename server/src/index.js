@@ -53,8 +53,11 @@ app.use('/sfx', express.static(path.join(__dirname, '..', 'data', 'sfx')));
 // forward. Other /v1 paths fall through to the proxy below.
 app.use('/v1', transcribeRouter);
 
-// OpenAI-compatible text-to-speech. Mounted before the GPU middleware below so
-// narration requests never stop ComfyUI: Kokoro runs on CPU.
+// OpenAI-compatible text-to-speech, two engines (Kokoro, Orpheus). Mounted
+// before the GPU middleware below so Kokoro narration requests never stop
+// ComfyUI -- Kokoro runs on CPU and is unaffected by GPU state. Orpheus is
+// GPU-bound and gates itself explicitly inside speech.js via
+// gpu.requireLlama(), since the middleware below only covers proxyRouter.
 app.use('/v1', speechRouter);
 
 // Any llama-swap traffic (chat + image generation) needs the GPU in llama
